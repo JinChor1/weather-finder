@@ -45,7 +45,17 @@ The client's stated success criteria (feature completeness, code readability, we
 
 Serve these from `public/` with a root-relative path (e.g. `/bg-light.png`) rather than importing them through `src/assets/` — nothing in `src/` re-exports or wraps them yet.
 
-**Open items, not decided yet** (flag/ask rather than assuming when implementation starts): whether history persistence is `localStorage` or something else; where the OpenWeatherMap API key is sourced from (a `VITE_`-prefixed env var is the obvious choice given the stack, but per the stack table below, Vite inlines any `VITE_*` value into the client bundle — acceptable for a free-tier key in this kind of project, but the `.env` file itself must stay out of git); and where the "assumptions" document lives (README vs. a separate file in `docs/`).
+**Open items, not decided yet** (flag/ask rather than assuming when implementation starts): whether history persistence is `localStorage` or something else; and where the "assumptions" document lives (README vs. a separate file in `docs/`).
+
+## OpenWeatherMap integration
+
+The data-fetching layer is built (env var, Zod-validated client, TanStack Query hooks) but **not yet wired into any UI** — `SearchBar`/`WeatherResult`/`NotFoundBanner` are still static, and `App.tsx` still renders hardcoded sample data. Wiring them together (search-button click → real query, error states → `NotFoundBanner`, dropdown → suggestions) is future work. What exists today:
+
+- **API key**: `VITE_OPENWEATHER_API_KEY`, read via `import.meta.env` (typed in `src/vite-env.d.ts`). Copy `.env.example` to `.env` and fill in a real key — `.env`/`.env.*` are gitignored (with `.env.example` explicitly un-ignored), see `README.md` for where to get a free key.
+- **Raw-response validation**: `src/features/weather/api/openWeatherSchemas.ts` — Zod schemas for OpenWeatherMap's actual JSON shapes (Current Weather Data + Geocoding direct endpoints), kept separate from `src/features/weather/schema.ts`'s `weatherResultSchema` (the UI-facing display shape). Don't conflate the two: the API schemas validate "their side," `weatherResultSchema` is "our side."
+- **Client**: `src/features/weather/api/openWeatherClient.ts` — `fetchCurrentWeather(city, country)` and `fetchLocationSuggestions(city, country)`, both throwing a typed `OpenWeatherApiError` (`status` + a `reason` union — `'not-found'` is the specific signal a future task should key `NotFoundBanner` off of, distinct from other failure reasons). Also exports `shouldRetryOpenWeatherQuery`, a shared TanStack Query `retry` function that skips retrying deterministic 4xx failures.
+- **Hooks**: `src/features/weather/hooks/useCurrentWeatherQuery.ts` and `useLocationSuggestionsQuery.ts` — thin `useQuery` wrappers (reads, not mutations — this is cacheable GET data, which is what makes "search again from history" cheap once history exists). `useCurrentWeatherQuery` takes `{ city, country } | null` and stays disabled on `null`; `useLocationSuggestionsQuery` stays disabled until the city text reaches a minimum length and does **not** debounce internally — debouncing the input before it reaches this hook is the future `SearchBar`-wiring task's job.
+- **Assumption on record**: OpenWeatherMap's geocoding API has no separate "look up a country" endpoint — suggestions are driven by combining the typed city and country into one `q` string (`"{city},{countryCode}"`). Don't build a second, separate country-suggestion path against a nonexistent endpoint.
 
 ## Documentation (`docs/`)
 
