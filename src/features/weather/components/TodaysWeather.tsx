@@ -21,7 +21,7 @@ export function TodaysWeather() {
 
   return (
     <>
-      <SearchBar onSearch={setSearchQuery} />
+      <SearchBar onSearch={setSearchQuery} onClear={() => setSearchQuery(null)} />
       <div className="mt-6">
         {weatherQuery.isFetching && (
           <div

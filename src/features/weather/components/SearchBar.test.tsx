@@ -33,12 +33,12 @@ function makeResult(overrides: Partial<SuggestionsResult>): SuggestionsResult {
   } as SuggestionsResult
 }
 
-function renderSearchBar(onSearch: (query: string) => void = vi.fn()) {
+function renderSearchBar(onSearch: (query: string) => void = vi.fn(), onClear: () => void = vi.fn()) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   function Wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   }
-  return render(<SearchBar onSearch={onSearch} />, { wrapper: Wrapper })
+  return render(<SearchBar onSearch={onSearch} onClear={onClear} />, { wrapper: Wrapper })
 }
 
 /** Types into the search input and flushes the debounce so the mocked hook's latest return value drives the UI. */
@@ -228,6 +228,21 @@ describe('SearchBar', () => {
 
     expect(onSearch).toHaveBeenCalledTimes(1)
     expect(onSearch).toHaveBeenCalledWith('Johor, MY')
+  })
+
+  it('clears the input, closes the dropdown, and calls onClear when Clear is clicked', () => {
+    mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isSuccess: true, data: [singapore] }))
+    const onClear = vi.fn()
+    renderSearchBar(vi.fn(), onClear)
+
+    typeQueryAndSettle('Sing')
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
+
+    expect(screen.getByLabelText('City/Country/State')).toHaveValue('')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(onClear).toHaveBeenCalledTimes(1)
   })
 
   it('reports an empty trimmed query as-is on Search, relying on useCurrentWeatherQuery to no-op rather than guarding here', () => {

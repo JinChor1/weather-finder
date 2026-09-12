@@ -24,17 +24,23 @@ interface SearchBarProps {
    * here.
    */
   onSearch: (query: string) => void
+  /**
+   * Called when the Clear button is clicked. This component resets its own
+   * input/suggestions state on Clear; `onClear` lets the caller reset
+   * whatever *submitted* search/result state it owns in parallel (mirrors
+   * `onSearch`'s division of responsibility).
+   */
+  onClear: () => void
 }
 
 /**
  * Search bar for the "Today's Weather" feature. A single free-text
  * City/Country/State input is controlled and drives a debounced
- * location-suggestions dropdown; Clear is still presentational (wiring it up
- * is a separate task). Search reports the current input up via `onSearch` —
- * it does not run the weather lookup itself, keeping this component focused
- * on input/typing/suggestions.
+ * location-suggestions dropdown. Search reports the current input up via
+ * `onSearch` — it does not run the weather lookup itself, keeping this
+ * component focused on input/typing/suggestions.
  */
-export function SearchBar({ onSearch }: SearchBarProps) {
+export function SearchBar({ onSearch, onClear }: SearchBarProps) {
   const [queryInput, setQueryInput] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -81,6 +87,15 @@ export function SearchBar({ onSearch }: SearchBarProps) {
 
   function handleSearchClick() {
     onSearch(queryInput.trim())
+  }
+
+  function handleClearClick() {
+    setQueryInput('')
+    debouncedCommit.cancel()
+    setDebouncedQuery('')
+    setIsDropdownOpen(false)
+    setActiveIndex(-1)
+    onClear()
   }
 
   function handleSelectSuggestion(suggestion: LocationSuggestion) {
@@ -219,7 +234,7 @@ export function SearchBar({ onSearch }: SearchBarProps) {
       </div>
 
       <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
-        <button type="button" aria-label="Clear" className="icon-button">
+        <button type="button" aria-label="Clear" onClick={handleClearClick} className="icon-button">
           <X aria-hidden="true" className="h-5 w-5" />
         </button>
         <button

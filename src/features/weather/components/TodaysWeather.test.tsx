@@ -136,4 +136,17 @@ describe('TodaysWeather', () => {
 
     expect(mockUseCurrentWeatherQuery).toHaveBeenLastCalledWith('Johor, MY')
   })
+
+  it('resets the submitted search back to idle when Clear is clicked', async () => {
+    const user = userEvent.setup()
+    renderTodaysWeather()
+
+    await user.type(screen.getByLabelText('City/Country/State'), 'Johor, MY')
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    expect(mockUseCurrentWeatherQuery).toHaveBeenLastCalledWith('Johor, MY')
+
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+
+    expect(mockUseCurrentWeatherQuery).toHaveBeenLastCalledWith(null)
+  })
 })
