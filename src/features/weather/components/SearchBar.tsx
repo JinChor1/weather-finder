@@ -168,7 +168,7 @@ export function SearchBar({ onSearch }: SearchBarProps) {
             aria-controls={SUGGESTIONS_PANEL_ID}
             aria-autocomplete="list"
             aria-activedescendant={activeIndex >= 0 ? `${SUGGESTIONS_PANEL_ID}-option-${activeIndex}` : undefined}
-            className="w-full bg-transparent text-sm font-medium text-content placeholder:text-content/40 focus:outline-none"
+            className="w-full bg-transparent text-sm font-medium text-content placeholder:text-content/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
           />
         </div>
 
