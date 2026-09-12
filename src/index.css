@@ -13,6 +13,12 @@
   --color-primary: #6c40b5;
   --color-primary-hover: #5c369a;
   --color-primary-strong: #4c2d7f;
+
+  /* Client-requested app-wide font, loaded via <link> tags in index.html
+     (weights 400/500/600/700 to cover the font-medium/font-semibold/font-bold
+     utilities used across src/features). Overriding this token makes both
+     Preflight's default body font and the `font-sans` utility resolve to it. */
+  --font-sans: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 /*
