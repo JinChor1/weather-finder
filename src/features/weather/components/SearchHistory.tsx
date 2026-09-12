@@ -150,7 +150,18 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
       </p>
 
       {entries.length === 0 ? (
-        <p className="py-6 text-center text-sm font-medium text-muted/70">No Record</p>
+        // This is the *only* content of the empty state (the "No Record"
+        // message requirement #5 calls for), sitting on `.glass-panel` — a
+        // ~30%-opaque surface over the full-bleed photographic background.
+        // `text-muted/70` (this component's original recipe, matching
+        // `.field-label`) stacks a third layer of transparency on top of
+        // that, landing well under 4.5:1 against a light sky region behind
+        // the panel. `text-content` at full opacity is the same color this
+        // repo already renders directly on `.glass-panel` elsewhere (e.g.
+        // `WeatherResult`'s location name) with no opacity modifier, so it's
+        // reusing an already-vetted-at-full-strength token rather than a
+        // one-off color.
+        <p className="py-6 text-center text-sm font-semibold text-content">No Record</p>
       ) : (
         <>
           <ul ref={listRef} tabIndex={-1} className="divide-y divide-content/10 focus:outline-none">
