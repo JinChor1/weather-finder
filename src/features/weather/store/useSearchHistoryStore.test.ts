@@ -42,7 +42,7 @@ describe('useSearchHistoryStore', () => {
     expect(JSON.parse(stored as string).state.entries).toHaveLength(1)
   })
 
-  it('moves a re-searched location to the top and updates its query/timestamp instead of duplicating it', () => {
+  it('moves a re-searched location to the top and updates its label/timestamp instead of duplicating it, matching on the raw query (case-insensitive) rather than the display label', () => {
     act(() => {
       useSearchHistoryStore.getState().addEntry({ label: 'Johor, MY', query: 'Johor, MY' })
       useSearchHistoryStore.getState().addEntry({ label: 'Paris, FR', query: 'Paris, FR' })
@@ -50,15 +50,32 @@ describe('useSearchHistoryStore', () => {
     const originalId = useSearchHistoryStore.getState().entries[1].id
 
     act(() => {
-      // Case-insensitive re-search with a slightly different raw query string.
-      useSearchHistoryStore.getState().addEntry({ label: 'johor, my', query: 'Johor Bahru, Johor, MY' })
+      // Same raw query, different case, and the weather API happening to
+      // return a slightly different display label this time.
+      useSearchHistoryStore.getState().addEntry({ label: 'Johor Bahru, MY', query: 'johor, my' })
     })
 
     const { entries } = useSearchHistoryStore.getState()
     expect(entries).toHaveLength(2)
-    expect(entries[0].label).toBe('johor, my')
+    expect(entries[0].label).toBe('Johor Bahru, MY')
     expect(entries[0].id).toBe(originalId)
-    expect(entries[0].query).toBe('Johor Bahru, Johor, MY')
+    expect(entries[0].query).toBe('johor, my')
+  })
+
+  it('keeps two entries with the same display label but different raw queries distinct, instead of merging them', () => {
+    // Two real, different "Springfield, US" locations (different states) —
+    // `label` is built from the weather API's `city`/`country` only, so
+    // both would render identically, even though the raw queries that
+    // produced them differ.
+    act(() => {
+      useSearchHistoryStore.getState().addEntry({ label: 'Springfield, US', query: 'Springfield, Illinois, US' })
+      useSearchHistoryStore.getState().addEntry({ label: 'Springfield, US', query: 'Springfield, Missouri, US' })
+    })
+
+    const { entries } = useSearchHistoryStore.getState()
+    expect(entries).toHaveLength(2)
+    expect(entries.map((entry) => entry.query)).toEqual(['Springfield, Missouri, US', 'Springfield, Illinois, US'])
+    expect(entries[0].id).not.toBe(entries[1].id)
   })
 
   it(`caps history at ${MAX_SEARCH_HISTORY_SIZE} entries, evicting the oldest`, () => {

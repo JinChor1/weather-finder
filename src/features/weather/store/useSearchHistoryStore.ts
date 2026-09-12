@@ -25,15 +25,30 @@ interface SearchHistoryState {
   /** Most-recent-first. Capped at `MAX_SEARCH_HISTORY_SIZE`. */
   entries: SearchHistoryEntry[]
   /**
-   * Adds a new history entry, or — if an entry with the same `label`
-   * (case-insensitive) already exists — moves it to the top and refreshes
-   * its `query`/`searchedAt` instead of creating a duplicate row.
+   * Adds a new history entry, or — if an entry with the same raw `query`
+   * (case-insensitive, trimmed) already exists — moves it to the top and
+   * refreshes its `label`/`searchedAt` instead of creating a duplicate row.
    */
   addEntry: (entry: { label: string; query: string }) => void
   /** Removes a single entry by id. */
   removeEntry: (id: string) => void
 }
 
+/**
+ * Two entries are "the same location" when they share the same raw `query`
+ * text — not the display `label`. `label` is built purely from the *weather
+ * API response* (`city`, `country`; see `TodaysWeather.tsx`), which drops
+ * any state/region, so two genuinely different places can render an
+ * identical label (OpenWeatherMap's geocoding doesn't guarantee city-name
+ * uniqueness within a country — e.g. two distinct "Springfield, US" results
+ * in different states). Matching on `label` would silently merge those into
+ * one row, overwriting the earlier one's `query` and making it unreachable
+ * via "search again". The raw `query` — the exact text that produced this
+ * result — is the most stable disambiguator available at this call site (no
+ * lat/lon is plumbed through `weatherResultSchema` today); it also means a
+ * genuine re-search (the same text submitted again, including via "search
+ * again") still moves the existing row to the top instead of duplicating it.
+ */
 function sameLocation(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase()
 }
@@ -51,7 +66,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
       addEntry: ({ label, query }) =>
         set((state) => {
           const searchedAt = new Date().toISOString()
-          const existing = state.entries.find((entry) => sameLocation(entry.label, label))
+          const existing = state.entries.find((entry) => sameLocation(entry.query, query))
           const withoutExisting = existing
             ? state.entries.filter((entry) => entry.id !== existing.id)
             : state.entries
