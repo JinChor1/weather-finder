@@ -103,7 +103,7 @@ describe('TodaysWeather', () => {
 
   it('renders the not-found banner for a not-found error', () => {
     const error = { reason: 'not-found' } as OpenWeatherApiError
-    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isError: true, error }))
+    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isError: true, error, status: 'error' }))
     renderTodaysWeather()
 
     expect(screen.getByRole('alert')).toHaveTextContent(/not found/i)
@@ -111,7 +111,7 @@ describe('TodaysWeather', () => {
 
   it('renders reason-specific copy for a non-"not-found" error, instead of the misleading "Not found" text', () => {
     const error = { reason: 'network' } as OpenWeatherApiError
-    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isError: true, error }))
+    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isError: true, error, status: 'error' }))
     renderTodaysWeather()
 
     const alert = screen.getByRole('alert')
@@ -120,11 +120,21 @@ describe('TodaysWeather', () => {
   })
 
   it('renders the weather result on success', () => {
-    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isSuccess: true, data: weather }))
+    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isSuccess: true, data: weather, status: 'success' }))
     renderTodaysWeather()
 
     expect(screen.getByRole('region', { name: /today's weather/i })).toBeInTheDocument()
     expect(screen.getByText('Johor, MY')).toBeInTheDocument()
+  })
+
+  it('keeps the weather result visible during a background refetch', () => {
+    mockUseCurrentWeatherQuery.mockReturnValue(
+      makeResult({ isSuccess: true, data: weather, status: 'success', isFetching: true }),
+    )
+    renderTodaysWeather()
+
+    expect(screen.getByRole('region', { name: /today's weather/i })).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('runs a search when Search is clicked with the typed query', async () => {

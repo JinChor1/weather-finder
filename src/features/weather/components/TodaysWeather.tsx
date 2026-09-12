@@ -23,7 +23,16 @@ export function TodaysWeather() {
     <>
       <SearchBar onSearch={setSearchQuery} onClear={() => setSearchQuery(null)} />
       <div className="mt-6">
-        {weatherQuery.isFetching && (
+        {/*
+          Branch off `status` rather than `isFetching` so a background
+          refetch (e.g. `refetchOnWindowFocus` firing after alt-tabbing back)
+          never tears down an already-rendered result — `status` stays
+          `'success'`/`'error'` throughout a background refetch, only
+          `isFetching` flips. `isFetching` is still checked alongside
+          `status === 'pending'` to tell "actually loading" apart from
+          "idle, nothing submitted yet" (both are `'pending'`).
+        */}
+        {weatherQuery.status === 'pending' && weatherQuery.isFetching && (
           <div
             role="status"
             aria-busy="true"
@@ -35,11 +44,11 @@ export function TodaysWeather() {
           </div>
         )}
 
-        {!weatherQuery.isFetching && weatherQuery.isError && <NotFoundBanner reason={weatherQuery.error.reason} />}
+        {weatherQuery.status === 'error' && <NotFoundBanner reason={weatherQuery.error.reason} />}
 
-        {!weatherQuery.isFetching && weatherQuery.isSuccess && <WeatherResult weather={weatherQuery.data} />}
+        {weatherQuery.status === 'success' && <WeatherResult weather={weatherQuery.data} />}
 
-        {!weatherQuery.isFetching && !weatherQuery.isError && !weatherQuery.isSuccess && (
+        {weatherQuery.status === 'pending' && !weatherQuery.isFetching && (
           <div className="glass-panel mx-auto w-full max-w-2xl p-8 text-center text-sm font-medium text-muted">
             Search a city, country, or state to see today's weather.
           </div>
