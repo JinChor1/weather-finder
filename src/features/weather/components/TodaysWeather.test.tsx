@@ -127,6 +127,22 @@ describe('TodaysWeather', () => {
     expect(screen.getByText('Johor, MY')).toBeInTheDocument()
   })
 
+  it('announces a successful search to assistive tech via a persistent live region', () => {
+    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isSuccess: true, data: weather, status: 'success' }))
+    const { container } = renderTodaysWeather()
+
+    const liveRegion = container.querySelector('[aria-live="polite"].sr-only')
+    expect(liveRegion).toHaveTextContent('Weather loaded for Johor, MY')
+  })
+
+  it('keeps the success live region present but empty before any result has loaded', () => {
+    const { container } = renderTodaysWeather()
+
+    const liveRegion = container.querySelector('[aria-live="polite"].sr-only')
+    expect(liveRegion).toBeInTheDocument()
+    expect(liveRegion).toHaveTextContent('')
+  })
+
   it('keeps the weather result visible during a background refetch', () => {
     mockUseCurrentWeatherQuery.mockReturnValue(
       makeResult({ isSuccess: true, data: weather, status: 'success', isFetching: true }),

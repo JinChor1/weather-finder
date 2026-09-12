@@ -54,6 +54,20 @@ export function TodaysWeather() {
           </div>
         )}
       </div>
+
+      {/*
+        Loading is announced via the `role="status"` panel above and errors
+        via `NotFoundBanner`'s `role="alert"`, but a successful result had no
+        equivalent announcement. This element is always rendered (never
+        conditionally mounted/unmounted) since screen readers are unreliable
+        about announcing a live region that appears and disappears within the
+        same update — only its text content changes.
+      */}
+      <p aria-live="polite" className="sr-only">
+        {weatherQuery.status === 'success'
+          ? `Weather loaded for ${weatherQuery.data.city}, ${weatherQuery.data.country}`
+          : ''}
+      </p>
     </>
   )
 }
