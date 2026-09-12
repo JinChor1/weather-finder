@@ -1,5 +1,186 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Brand color. Primary purple is pinned to the client's exact hex
+ * (#6C40B5) rather than a stock Tailwind swatch. `-hover`/`-strong` are
+ * derived shades (progressively darker) for the search button's hover and
+ * focus-ring states, mirroring the purple-700/800/900 relationship the UI
+ * used before this token existed.
+ */
+@theme {
+  --color-primary: #6c40b5;
+  --color-primary-hover: #5c369a;
+  --color-primary-strong: #4c2d7f;
+
+  /* Client-requested app-wide font, loaded via <link> tags in index.html
+     (weights 400/500/600/700 to cover the font-medium/font-semibold/font-bold
+     utilities used across src/features). Overriding this token makes both
+     Preflight's default body font and the `font-sans` utility resolve to it. */
+  --font-sans: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Theme-aware semantic tokens. Light values live on `:root`, dark
+ * overrides on `.dark` (the class `useThemeStore` toggles on `<html>`).
+ * Exposed to Tailwind via `@theme inline` so components can use plain
+ * utilities (e.g. `text-content`, `bg-surface-glass`) with no `dark:`
+ * variant — the CSS variable itself swaps.
+ *
+ * Values that use the same numeric opacity in both themes (e.g. --muted at
+ * `/70` and `/80`) are kept as solid colors so Tailwind's opacity modifier
+ * still works normally. Values whose opacity or base color differs between
+ * themes (most of the frosted-glass surfaces) have their alpha baked
+ * directly into the token instead, since a single utility modifier can't
+ * express two different opacities per theme.
+ */
+:root {
+  --content: #6C40B5; /* purple-950 */
+  --muted: #6C40B5; /* purple-950; used at /70 (labels) and /80 (meta text) */
+  --eyebrow: rgb(59 7 100 / 0.6); /* purple-950 @ 60% */
+
+  --icon-content: #581c87; /* purple-900 */
+  --icon-surface: rgb(255 255 255 / 0.7);
+  --icon-surface-hover: rgb(255 255 255 / 1);
+
+  --surface-glass: rgb(255 255 255 / 0.3);
+  --surface-solid: #f7f4fc; /* opaque version of --surface-glass, same white-with-purple-tint family, alpha pushed to 1 */
+  --glass: rgb(255 255 255 / 0.4); /* glass panel ring */
+
+  /* Hover/keyboard-active highlight for rows sitting on `.solid-panel`
+     (SearchBar's suggestion list). A light tint of --color-primary so it
+     reads clearly against the near-white --surface-solid while --content
+     (also #6C40B5 in light mode) stays legible on top. */
+  --secondary: color-mix(in srgb, var(--color-primary) 20%, white);
+
+  --danger-content: #881337; /* rose-900 */
+  --danger-icon: #e11d48; /* rose-600 */
+  --danger-border: rgb(244 63 94 / 0.5); /* rose-500 @ 50% */
+  --danger-surface: rgb(255 241 242 / 0.8); /* rose-50 @ 80% */
+  --danger-muted: rgb(159 18 57 / 0.9); /* rose-800 @ 90% */
+
+  /* Focus-visible outline color. `--color-primary-strong` already reads
+     fine here (~9.7:1 against --surface-solid), so this just reuses it —
+     see the `.dark` override below for why this can't be shared as-is. */
+  --focus-ring: var(--color-primary-strong);
+
+  /* Search input placeholder color. A muted, desaturated lavender rather
+     than an opacity modifier on `--content` (#6C40B5): alpha-blending
+     `--content` down to `/60` (the previous fix) only reaches ~2.75:1
+     against `--surface-solid`, and even pushing that modifier to `/85`
+     (the minimum that clears 4.5:1) reads as barely distinguishable from
+     real typed input text. This solid color clears 4.5:1 with real margin
+     (~4.8:1 against --surface-solid) while staying visibly dimmer/grayer
+     than --content. */
+  --placeholder: #75658f;
+}
+
+.dark {
+  --content: #ffffff;
+  --muted: #f3e8ff; /* purple-100 */
+  --eyebrow: rgb(233 213 255 / 0.7); /* purple-200 @ 70% */
+
+  --icon-content: #ffffff;
+  --icon-surface: rgb(255 255 255 / 0.1);
+  --icon-surface-hover: rgb(255 255 255 / 0.2);
+
+  --surface-glass: rgb(0 0 0 / 0.3);
+  --surface-solid: #2a1b45; /* opaque version of --surface-glass, same near-black-with-purple-tint family, alpha pushed to 1 */
+  --glass: rgb(255 255 255 / 0.1);
+
+  /* Unlike the light-mode tint above, --content is #ffffff in dark mode, so
+     a *light* purple would put white-on-light-purple (poor contrast).
+     Mixed mostly toward --color-primary instead of white, this lands as a
+     mid-tone purple between --surface-solid and --color-primary — clearly
+     visible against the dark panel while keeping white text legible on top. */
+  --secondary: color-mix(in srgb, var(--color-primary) 75%, var(--surface-solid) 25%);
+
+  --danger-content: #ffe4e6; /* rose-100 */
+  --danger-icon: #fda4af; /* rose-300 */
+  --danger-border: rgb(244 63 94 / 0.4); /* rose-500 @ 40% */
+  --danger-surface: rgb(76 5 25 / 0.5); /* rose-950 @ 50% */
+  --danger-muted: rgb(254 205 211 / 0.8); /* rose-200 @ 80% */
+
+  /* `--color-primary-strong` (#4c2d7f) computes to only ~1.5:1 against this
+     theme's `--surface-solid` (#2a1b45) — both are dark, so a dark-purple
+     focus ring is nearly invisible here. A light lavender clears WCAG
+     1.4.11's 3:1 non-text-contrast target with plenty of margin (~8.5:1)
+     while still reading as an accent color rather than plain white. */
+  --focus-ring: #c4b5fd; /* violet-300 */
+
+  /* Same reasoning as the light-mode value above, mirrored for dark:
+     alpha-blending --content (#ffffff) down to /60 already clears 4.5:1
+     here (~6.5:1), but a solid muted lavender keeps the placeholder
+     visually consistent with its light-mode counterpart and clearly
+     dimmer than full-white real input text (~6.2:1 against
+     --surface-solid). */
+  --placeholder: #a99ec0;
+}
+
+@theme inline {
+  --color-content: var(--content);
+  --color-muted: var(--muted);
+  --color-eyebrow: var(--eyebrow);
+
+  --color-icon-content: var(--icon-content);
+  --color-icon-surface: var(--icon-surface);
+  --color-icon-surface-hover: var(--icon-surface-hover);
+
+  --color-surface-glass: var(--surface-glass);
+  --color-surface-solid: var(--surface-solid);
+  --color-glass: var(--glass);
+  --color-secondary: var(--secondary);
+
+  --color-danger-content: var(--danger-content);
+  --color-danger-icon: var(--danger-icon);
+  --color-danger-border: var(--danger-border);
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-muted: var(--danger-muted);
+
+  --color-focus-ring: var(--focus-ring);
+  --color-placeholder: var(--placeholder);
+}
+
+/*
+ * Shared visual patterns pulled out of components that repeated them
+ * near-verbatim. Built with `@apply` against the tokens above rather than
+ * raw color utilities so a palette change only has to happen here.
+ */
+@layer components {
+  /* Frosted glass card background, shared by SearchBar's pill and
+     WeatherResult's card. Layout (rounding overrides, padding) stays with
+     each consumer since those genuinely differ per usage. */
+  .glass-panel {
+    @apply rounded-3xl bg-surface-glass shadow-lg ring-1 ring-glass backdrop-blur-md;
+  }
+
+  /* Same shape/shadow/ring treatment as .glass-panel, but with a fully
+     opaque background and no backdrop-blur (pointless once the background
+     is opaque). Used where content sitting on top needs guaranteed
+     contrast instead of blending with whatever's behind it — e.g.
+     SearchBar's suggestions dropdown, which can render above WeatherResult. */
+  .solid-panel {
+    @apply rounded-3xl bg-surface-solid shadow-lg ring-1 ring-glass;
+  }
+
+  /* Circular icon-only button, shared by SearchBar's Clear button and
+     ThemeToggle. */
+  .icon-button {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-content/15 bg-icon-surface text-icon-content shadow-sm transition hover:bg-icon-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring;
+  }
+
+  /* Small field label used above the City/Country inputs. */
+  .field-label {
+    @apply text-[11px] font-medium tracking-wide text-muted/70;
+  }
+
+  /* Uppercase "eyebrow" heading style used above the current temperature. */
+  .eyebrow-label {
+    @apply text-xs font-medium tracking-wide text-eyebrow uppercase;
+  }
+}
+
 body {
   min-height: 100vh;
 }

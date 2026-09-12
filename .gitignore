@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Local env vars (holds the OpenWeatherMap API key) — never commit this.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
