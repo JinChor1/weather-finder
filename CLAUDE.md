@@ -38,6 +38,13 @@ Condensed requirements (see the source docs for the authoritative wording and mo
 
 The client's stated success criteria (feature completeness, code readability, web standards compliance, reusability/extendibility, responsive compatibility, UI/UX quality) are exactly what the `react-specialist` / `code-reviewer` / `a11y-auditor` agents below already enforce — this feature is the concrete thing they'll all end up working on.
 
+**Design assets** (`public/`) — the mockup's actual art, matching `docs/Requirement.pdf`:
+- `bg-light.png` / `bg-dark.png` — full-bleed purple cloudy-sky background images for the light and dark theme respectively (see requirement 7 above — at least one is used; both implies the theme switcher swaps between them).
+- `cloud.png` / `sun.png` — the weather condition icon glyphs from the mockup (a rain cloud, and a cloud-over-sun combo) — presumably the start of a small icon set for mapping OpenWeatherMap conditions to an illustration; more conditions may need equivalent art later (clear, thunderstorm, snow, etc.) if the API returns something these two don't cover.
+- `favicon.svg` — the default Vite placeholder favicon, unrelated to the mockup; still pending a real favicon.
+
+Serve these from `public/` with a root-relative path (e.g. `/bg-light.png`) rather than importing them through `src/assets/` — nothing in `src/` re-exports or wraps them yet.
+
 **Open items, not decided yet** (flag/ask rather than assuming when implementation starts): whether history persistence is `localStorage` or something else; where the OpenWeatherMap API key is sourced from (a `VITE_`-prefixed env var is the obvious choice given the stack, but per the stack table below, Vite inlines any `VITE_*` value into the client bundle — acceptable for a free-tier key in this kind of project, but the `.env` file itself must stay out of git); and where the "assumptions" document lives (README vs. a separate file in `docs/`).
 
 ## Documentation (`docs/`)
