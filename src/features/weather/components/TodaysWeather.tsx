@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { SearchBar } from './SearchBar'
 import { WeatherResult } from './WeatherResult'
 import { NotFoundBanner } from './NotFoundBanner'
+import { SearchHistory } from './SearchHistory'
 import { useCurrentWeatherQuery } from '../hooks/useCurrentWeatherQuery'
+import { useSearchHistoryStore } from '../store/useSearchHistoryStore'
 
 /**
  * Composes `SearchBar` with the "Today's Weather" result area. Owns the
@@ -19,8 +21,34 @@ export function TodaysWeather() {
   const [searchQuery, setSearchQuery] = useState<string | null>(null)
   const weatherQuery = useCurrentWeatherQuery(searchQuery)
 
+  const historyEntries = useSearchHistoryStore((state) => state.entries)
+  const addHistoryEntry = useSearchHistoryStore((state) => state.addEntry)
+  const removeHistoryEntry = useSearchHistoryStore((state) => state.removeEntry)
+
+  // Synchronizing history (a `localStorage`-backed store, an external system
+  // boundary) with the outcome of a query is a legitimate `useEffect` use
+  // per this repo's "prefer event handlers, but effects are fine for real
+  // synchronization" convention — a plain event-handler callback can't see
+  // *query* success (as opposed to "the click happened"), including a
+  // background refetch resolving. `weatherQuery.data` is keyed in rather
+  // than relying on `status` alone so this only re-fires when the
+  // underlying result actually changes, not on every unrelated re-render.
+  useEffect(() => {
+    if (weatherQuery.status !== 'success' || !searchQuery) return
+    const { city, country } = weatherQuery.data
+    addHistoryEntry({ label: `${city}, ${country}`, query: searchQuery })
+  }, [weatherQuery.status, weatherQuery.data, searchQuery, addHistoryEntry])
+
   return (
     <>
+      {/*
+        "Search again" only re-runs the lookup via `setSearchQuery` — it
+        does not also push the history row's text back into `SearchBar`'s
+        input. `SearchBar` owns its input as internal, uncontrolled state
+        with no `value` prop today, and the mockup doesn't show the input
+        needing to reflect a history row's text, so lifting it to controlled
+        state here would be a bigger change than this feature needs.
+      */}
       <SearchBar onSearch={setSearchQuery} onClear={() => setSearchQuery(null)} />
       <div className="mt-6">
         {/*
@@ -68,6 +96,8 @@ export function TodaysWeather() {
           ? `Weather loaded for ${weatherQuery.data.city}, ${weatherQuery.data.country}`
           : ''}
       </p>
+
+      <SearchHistory entries={historyEntries} onSearchAgain={setSearchQuery} onDelete={removeHistoryEntry} />
     </>
   )
 }

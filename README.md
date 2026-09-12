@@ -67,3 +67,9 @@ over a photo — before it lands in code.
   temperature exactly. This is a deliberate, stated assumption driven by a
   free-tier API constraint, not a bug: a real daily high/low would require
   the One Call or 5-day/3-hour forecast endpoint instead.
+- **Search history cap (20 entries)**: search history is capped at
+  `MAX_SEARCH_HISTORY_SIZE` (`src/features/weather/store/useSearchHistoryStore.ts`),
+  currently 20. No size is specified in the requirements docs; 20 is a
+  reasonable default (roughly a week's worth of casual daily lookups) that
+  keeps the `localStorage`-persisted payload small. Oldest entries are
+  evicted first once a new search would exceed the cap.
