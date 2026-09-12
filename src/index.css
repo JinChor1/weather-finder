@@ -2,6 +2,120 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Brand color. Primary purple is pinned to the client's exact hex
+ * (#6C40B5) rather than a stock Tailwind swatch. `-hover`/`-strong` are
+ * derived shades (progressively darker) for the search button's hover and
+ * focus-ring states, mirroring the purple-700/800/900 relationship the UI
+ * used before this token existed.
+ */
+@theme {
+  --color-primary: #6c40b5;
+  --color-primary-hover: #5c369a;
+  --color-primary-strong: #4c2d7f;
+}
+
+/*
+ * Theme-aware semantic tokens. Light values live on `:root`, dark
+ * overrides on `.dark` (the class `useThemeStore` toggles on `<html>`).
+ * Exposed to Tailwind via `@theme inline` so components can use plain
+ * utilities (e.g. `text-content`, `bg-surface-glass`) with no `dark:`
+ * variant — the CSS variable itself swaps.
+ *
+ * Values that use the same numeric opacity in both themes (e.g. --muted at
+ * `/70` and `/80`) are kept as solid colors so Tailwind's opacity modifier
+ * still works normally. Values whose opacity or base color differs between
+ * themes (most of the frosted-glass surfaces) have their alpha baked
+ * directly into the token instead, since a single utility modifier can't
+ * express two different opacities per theme.
+ */
+:root {
+  --content: #6C40B5; /* purple-950 */
+  --muted: #6C40B5; /* purple-950; used at /70 (labels) and /80 (meta text) */
+  --eyebrow: rgb(59 7 100 / 0.6); /* purple-950 @ 60% */
+
+  --icon-content: #581c87; /* purple-900 */
+  --icon-surface: rgb(255 255 255 / 0.7);
+  --icon-surface-hover: rgb(255 255 255 / 1);
+
+  --surface-glass: rgb(255 255 255 / 0.3);
+  --glass: rgb(255 255 255 / 0.4); /* glass panel ring */
+
+  --danger-content: #881337; /* rose-900 */
+  --danger-icon: #e11d48; /* rose-600 */
+  --danger-border: rgb(244 63 94 / 0.5); /* rose-500 @ 50% */
+  --danger-surface: rgb(255 241 242 / 0.8); /* rose-50 @ 80% */
+  --danger-muted: rgb(159 18 57 / 0.9); /* rose-800 @ 90% */
+}
+
+.dark {
+  --content: #ffffff;
+  --muted: #f3e8ff; /* purple-100 */
+  --eyebrow: rgb(233 213 255 / 0.7); /* purple-200 @ 70% */
+
+  --icon-content: #ffffff;
+  --icon-surface: rgb(255 255 255 / 0.1);
+  --icon-surface-hover: rgb(255 255 255 / 0.2);
+
+  --surface-glass: rgb(0 0 0 / 0.3);
+  --glass: rgb(255 255 255 / 0.1);
+
+  --danger-content: #ffe4e6; /* rose-100 */
+  --danger-icon: #fda4af; /* rose-300 */
+  --danger-border: rgb(244 63 94 / 0.4); /* rose-500 @ 40% */
+  --danger-surface: rgb(76 5 25 / 0.5); /* rose-950 @ 50% */
+  --danger-muted: rgb(254 205 211 / 0.8); /* rose-200 @ 80% */
+}
+
+@theme inline {
+  --color-content: var(--content);
+  --color-muted: var(--muted);
+  --color-eyebrow: var(--eyebrow);
+
+  --color-icon-content: var(--icon-content);
+  --color-icon-surface: var(--icon-surface);
+  --color-icon-surface-hover: var(--icon-surface-hover);
+
+  --color-surface-glass: var(--surface-glass);
+  --color-glass: var(--glass);
+
+  --color-danger-content: var(--danger-content);
+  --color-danger-icon: var(--danger-icon);
+  --color-danger-border: var(--danger-border);
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-muted: var(--danger-muted);
+}
+
+/*
+ * Shared visual patterns pulled out of components that repeated them
+ * near-verbatim. Built with `@apply` against the tokens above rather than
+ * raw color utilities so a palette change only has to happen here.
+ */
+@layer components {
+  /* Frosted glass card background, shared by SearchBar's pill and
+     WeatherResult's card. Layout (rounding overrides, padding) stays with
+     each consumer since those genuinely differ per usage. */
+  .glass-panel {
+    @apply rounded-3xl bg-surface-glass shadow-lg ring-1 ring-glass backdrop-blur-md;
+  }
+
+  /* Circular icon-only button, shared by SearchBar's Clear button and
+     ThemeToggle. */
+  .icon-button {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-content/15 bg-icon-surface text-icon-content shadow-sm transition hover:bg-icon-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+  }
+
+  /* Small field label used above the City/Country inputs. */
+  .field-label {
+    @apply text-[11px] font-medium tracking-wide text-muted/70;
+  }
+
+  /* Uppercase "eyebrow" heading style used above the current temperature. */
+  .eyebrow-label {
+    @apply text-xs font-medium tracking-wide text-eyebrow uppercase;
+  }
+}
+
 body {
   min-height: 100vh;
 }

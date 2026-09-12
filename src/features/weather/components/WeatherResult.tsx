@@ -43,26 +43,24 @@ export function WeatherResult({ weather }: WeatherResultProps) {
   return (
     <section
       aria-label="Today's weather"
-      className="relative mx-auto w-full max-w-2xl px-4 pt-14 pb-2 text-purple-950 sm:pt-24 dark:text-white"
+      className="relative mx-auto w-full max-w-2xl pt-14 pb-2 text-content sm:pt-24"
     >
-      <div className="relative rounded-3xl bg-white/30 p-6 shadow-lg ring-1 ring-white/40 backdrop-blur-md dark:bg-black/30 dark:ring-white/10">
+      <div className="glass-panel relative p-6">
         <div className="absolute -top-12 right-2 h-32 w-32 sm:-top-20 sm:right-6 sm:h-56 sm:w-56">
           <WeatherIcon condition={condition} className="h-full w-full object-contain drop-shadow-lg" />
         </div>
 
-        <div className="grid grid-cols-[1fr_auto] items-start gap-x-4 pr-32 sm:block sm:pr-0">
+        <div className="grid grid-cols-[1fr_auto] items-start gap-x-4 sm:block ">
           <div className="col-start-1">
-            <p className="text-xs font-medium tracking-wide text-purple-950/60 uppercase dark:text-purple-200/70">
-              Today's Weather
-            </p>
+            <p className="eyebrow-label">Today's Weather</p>
             <p className="text-6xl leading-none font-bold sm:text-7xl">{Math.round(temperature)}°</p>
-            <p className="mt-2 text-sm font-medium text-purple-950/80 dark:text-purple-100/80">
+            <p className="mt-2 text-sm font-medium text-muted/80">
               H: {Math.round(temperatureHigh)}° L: {Math.round(temperatureLow)}°
             </p>
           </div>
 
-          <div className="col-start-2 flex flex-col items-end gap-1 pt-1 text-right text-sm text-purple-950/80 sm:mt-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-start sm:gap-x-6 sm:gap-y-1 sm:pt-0 sm:text-left dark:text-purple-100/80">
-            <p className="font-semibold text-purple-950 dark:text-white">
+          <div className="col-start-2 flex flex-col items-end gap-1 pt-1 text-right text-sm text-muted/80 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-start sm:gap-x-6 sm:gap-y-1 mt-10 sm:mt-0 sm:text-left">
+            <p className="font-semibold text-content">
               {city}, {country}
             </p>
             <p>{formatObservedAt(observedAt)}</p>

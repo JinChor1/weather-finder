@@ -14,12 +14,12 @@ export function NotFoundBanner() {
   return (
     <div
       role="alert"
-      className="mx-auto flex w-full max-w-2xl items-start gap-3 rounded-3xl border border-rose-500/50 bg-rose-50/80 p-4 text-rose-900 shadow-lg backdrop-blur-md dark:border-rose-500/40 dark:bg-rose-950/50 dark:text-rose-100"
+      className="mx-auto flex w-full max-w-2xl items-start gap-3 rounded-3xl border border-danger-border bg-danger-surface p-4 text-danger-content shadow-lg backdrop-blur-md"
     >
-      <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-rose-600 dark:text-rose-300" />
+      <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-danger-icon" />
       <div>
         <p className="font-semibold">Not found</p>
-        <p className="text-sm text-rose-800/90 dark:text-rose-200/80">
+        <p className="text-sm text-danger-muted">
           We couldn't find weather for that city and country. Check the spelling and try again.
         </p>
       </div>
