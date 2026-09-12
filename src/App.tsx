@@ -9,6 +9,7 @@ function App() {
   return (
     <div className="min-h-screen bg-[url('/bg-light.png')] bg-cover bg-center bg-fixed dark:bg-[url('/bg-dark.png')]">
       <div className="mx-auto max-w-3xl px-4 pt-8 sm:pt-12">
+        <h1 className="sr-only">Today's Weather</h1>
         <div className="mb-4 flex justify-end">
           <ThemeToggle />
         </div>

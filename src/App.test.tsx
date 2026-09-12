@@ -18,4 +18,15 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument()
   })
+
+  it('has a page heading identifying the app for assistive tech', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: "Today's Weather" })).toBeInTheDocument()
+  })
 })
