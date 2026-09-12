@@ -12,19 +12,19 @@ export interface LocationSuggestionsQueryParams {
   country: string
 }
 
-/** Below this many characters there's not enough to usefully suggest against. */
-const MIN_CITY_QUERY_LENGTH = 2
+/**
+ * Below this many characters there's not enough to usefully suggest
+ * against. Exported so `SearchBar` can gate the dropdown's visibility on
+ * the same threshold instead of duplicating the magic number.
+ */
+export const MIN_CITY_QUERY_LENGTH = 2
 
 /**
  * Fetches location suggestions for the search bar's dropdown from whatever
  * the user has typed so far. Disabled until the city text reaches
- * `MIN_CITY_QUERY_LENGTH`, so a future task can feed this hook live input
- * state directly without extra guarding.
- *
- * TODO(future task): this intentionally does not debounce — it fires a
- * request on every qualifying keystroke. Debouncing the `city`/`country`
- * values before they reach this hook is an input-layer concern for whoever
- * wires this into `SearchBar`.
+ * `MIN_CITY_QUERY_LENGTH`. Intentionally does not debounce — it fires a
+ * request on every qualifying keystroke it's given; `SearchBar` debounces
+ * the `city`/`country` values before feeding them into this hook.
  */
 export function useLocationSuggestionsQuery({
   city,
