@@ -168,7 +168,9 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
             {visibleEntries.map((entry) => (
               <li key={entry.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
-                  <p className="truncate font-semibold">{entry.label}</p>
+                  <p className="truncate font-semibold" title={entry.label}>
+                    {entry.label}
+                  </p>
                   <p className="text-sm text-muted/80">{formatSearchedAt(entry.searchedAt)}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">

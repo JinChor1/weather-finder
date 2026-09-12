@@ -54,6 +54,7 @@ describe('SearchHistory', () => {
     )
 
     expect(screen.getByText('Johor, MY')).toBeInTheDocument()
+    expect(screen.getByText('Johor, MY')).toHaveAttribute('title', 'Johor, MY')
     expect(screen.getByText('01-09-2022 09:41am')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Search again for Johor, MY' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete Johor, MY from history' })).toBeInTheDocument()
