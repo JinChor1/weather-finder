@@ -23,5 +23,8 @@ interface WeatherIconProps {
 export function WeatherIcon({ condition, className }: WeatherIconProps) {
   const src = ICON_SRC_BY_CONDITION[condition.toLowerCase()] ?? DEFAULT_ICON_SRC
 
-  return <img src={src} alt={`${condition} weather`} className={className} />
+  // Decorative: the only current consumer (`WeatherResult`) already renders
+  // `condition` as visible text in the same card, so a non-empty alt would
+  // have a screen reader announce the same information twice back-to-back.
+  return <img src={src} alt="" className={className} />
 }

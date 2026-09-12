@@ -31,17 +31,19 @@ describe('WeatherResult', () => {
     expect(screen.getByText('01-09-2022 09:41 AM')).toBeInTheDocument()
   })
 
-  it('renders the fallback icon for a non-clear condition', () => {
-    render(<WeatherResult weather={sampleWeather} />)
+  it('renders the fallback icon for a non-clear condition, decorative to assistive tech', () => {
+    const { container } = render(<WeatherResult weather={sampleWeather} />)
 
-    const icon = screen.getByAltText('Clouds weather')
+    const icon = container.querySelector('img')
     expect(icon).toHaveAttribute('src', '/cloud.png')
+    expect(icon).toHaveAttribute('alt', '')
   })
 
-  it('renders the clear-sky icon for a clear condition', () => {
-    render(<WeatherResult weather={{ ...sampleWeather, condition: 'Clear' }} />)
+  it('renders the clear-sky icon for a clear condition, decorative to assistive tech', () => {
+    const { container } = render(<WeatherResult weather={{ ...sampleWeather, condition: 'Clear' }} />)
 
-    const icon = screen.getByAltText('Clear weather')
+    const icon = container.querySelector('img')
     expect(icon).toHaveAttribute('src', '/sun.png')
+    expect(icon).toHaveAttribute('alt', '')
   })
 })
