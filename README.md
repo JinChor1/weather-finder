@@ -36,3 +36,23 @@ in a project like this.
 - `npm run typecheck` — run the TypeScript project-references check, no emit
 - `npm run test` — run the Vitest suite once
 - `npm run test:watch` — run Vitest in watch mode
+
+## Known issues / design follow-ups
+
+The following light-theme color-contrast findings were raised in an
+accessibility review and are documented here for a design-team decision,
+rather than fixed in code with an engineer's own guess at replacement
+colors:
+
+- The `--muted` token, and the `.field-label`/`.eyebrow-label` component
+  classes built on top of it, compute to roughly 2.8–4.4:1 contrast against
+  the app's panels in light mode — below the 4.5:1 WCAG AA target for normal
+  text.
+- Primary content text (`--content`) sitting on the translucent glass panel
+  (`.glass-panel`) over the full-bleed photographic background image can
+  also dip as low as roughly 3.5:1, depending on which part of the image is
+  behind it.
+
+Fixing this needs a design-team decision — darker token values, and/or a
+guaranteed-opaque text backing instead of relying on the translucent panel
+over a photo — before it lands in code.
