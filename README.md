@@ -56,3 +56,14 @@ colors:
 Fixing this needs a design-team decision — darker token values, and/or a
 guaranteed-opaque text backing instead of relying on the translucent panel
 over a photo — before it lands in code.
+
+## Assumptions
+
+- **`temperatureHigh`/`temperatureLow`**: populated from OpenWeatherMap's
+  Current Weather Data endpoint's `main.temp_min`/`main.temp_max`, which per
+  OpenWeatherMap's own docs represent the current min/max temperature
+  observed across nearby stations right now — not a true daily forecast
+  high/low. For many locations these will often equal the current
+  temperature exactly. This is a deliberate, stated assumption driven by a
+  free-tier API constraint, not a bug: a real daily high/low would require
+  the One Call or 5-day/3-hour forecast endpoint instead.
