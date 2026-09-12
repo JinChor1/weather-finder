@@ -132,4 +132,24 @@ describe('SearchHistory', () => {
     expect(screen.queryByRole('button', { name: /show more/i })).not.toBeInTheDocument()
     expect(document.activeElement).toBe(screen.getByRole('list'))
   })
+
+  it('announces the entry count via a polite live region, and updates it as rows are deleted', async () => {
+    const user = userEvent.setup()
+    render(<ControlledSearchHistory initialEntries={makeEntries(2)} />)
+
+    expect(screen.getByRole('status')).toHaveTextContent('2 entries in search history.')
+
+    await user.click(screen.getByRole('button', { name: 'Delete City 0, XX from history' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('1 entry in search history.')
+  })
+
+  it('announces the list becoming empty via the live region', async () => {
+    const user = userEvent.setup()
+    render(<ControlledSearchHistory initialEntries={[makeEntry({})]} />)
+
+    await user.click(screen.getByRole('button', { name: 'Delete Johor, MY from history' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('Search history is empty.')
+  })
 })

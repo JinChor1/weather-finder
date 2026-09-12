@@ -135,6 +135,20 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
         Search History
       </h2>
 
+      {/*
+        Announces row deletions and the list-becomes-empty transition to
+        screen-reader users, mirroring `TodaysWeather.tsx`'s `role="status"`/
+        `aria-live="polite"` pattern for its own loading/success states. A
+        short summary sentence (rather than the row/empty-state markup
+        itself living inside the live region) announces cleanly on every
+        change without the whole remaining list being re-read on each delete.
+      */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {entries.length === 0
+          ? 'Search history is empty.'
+          : `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} in search history.`}
+      </p>
+
       {entries.length === 0 ? (
         <p className="py-6 text-center text-sm font-medium text-muted/70">No Record</p>
       ) : (

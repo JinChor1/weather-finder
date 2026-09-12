@@ -102,7 +102,11 @@ describe('TodaysWeather', () => {
     renderTodaysWeather()
 
     expect(screen.getByText(/search a city, country, or state to see today's weather/i)).toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    // `SearchHistory` also has its own `role="status"` live region (for
+    // history-list mutations, unrelated to the weather lookup, and with no
+    // accessible name to filter `getByRole('status', { name })` on) — assert
+    // on the loading indicator's own text instead of the bare `status` role.
+    expect(screen.queryByText(/loading today's weather/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -110,8 +114,8 @@ describe('TodaysWeather', () => {
     mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isFetching: true }))
     renderTodaysWeather()
 
-    const status = screen.getByRole('status')
-    expect(status).toHaveTextContent(/loading today's weather/i)
+    const status = screen.getByText(/loading today's weather/i)
+    expect(status).toHaveAttribute('role', 'status')
     expect(status).toHaveAttribute('aria-busy', 'true')
   })
 
@@ -164,7 +168,7 @@ describe('TodaysWeather', () => {
     renderTodaysWeather()
 
     expect(screen.getByRole('region', { name: /today's weather/i })).toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByText(/loading today's weather/i)).not.toBeInTheDocument()
   })
 
   it('runs a search when Search is clicked with the typed query', async () => {
