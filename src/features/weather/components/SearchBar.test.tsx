@@ -34,12 +34,12 @@ function makeResult(overrides: Partial<SuggestionsResult>): SuggestionsResult {
   } as SuggestionsResult
 }
 
-function renderSearchBar() {
+function renderSearchBar(onSearch: (params: { city: string; country: string }) => void = vi.fn()) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   function Wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   }
-  return render(<SearchBar />, { wrapper: Wrapper })
+  return render(<SearchBar onSearch={onSearch} />, { wrapper: Wrapper })
 }
 
 /** Types into the City input and flushes the debounce so the mocked hook's latest return value drives the UI. */
@@ -220,5 +220,31 @@ describe('SearchBar', () => {
 
     fireEvent.mouseDown(document.body)
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('calls onSearch with the trimmed city/country when Search is clicked', () => {
+    const onSearch = vi.fn()
+    renderSearchBar(onSearch)
+
+    fireEvent.change(screen.getByLabelText('City'), { target: { value: '  Johor  ' } })
+    fireEvent.change(screen.getByLabelText('Country'), { target: { value: ' MY ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
+
+    expect(onSearch).toHaveBeenCalledTimes(1)
+    expect(onSearch).toHaveBeenCalledWith({ city: 'Johor', country: 'MY' })
+  })
+
+  it('reports an empty trimmed city as-is on Search, relying on useCurrentWeatherQuery to no-op rather than guarding here', () => {
+    // No explicit "don't call onSearch" guard lives in SearchBar — an empty
+    // trimmed city is reported as-is, and it's `useCurrentWeatherQuery`
+    // (owned by the caller) that naturally stays disabled for it, since it
+    // already treats an empty city as `enabled: false`.
+    const onSearch = vi.fn()
+    renderSearchBar(onSearch)
+
+    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'MY' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
+
+    expect(onSearch).toHaveBeenCalledWith({ city: '', country: 'MY' })
   })
 })

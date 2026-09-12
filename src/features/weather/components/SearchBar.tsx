@@ -6,6 +6,7 @@ import {
   MIN_CITY_QUERY_LENGTH,
   type LocationSuggestionsQueryParams,
 } from '../hooks/useLocationSuggestionsQuery'
+import type { CurrentWeatherSearchParams } from '../hooks/useCurrentWeatherQuery'
 import type { LocationSuggestion } from '../api/openWeatherClient'
 
 /** How long to wait after the user stops typing before refreshing suggestions. */
@@ -18,13 +19,26 @@ function suggestionLabel(suggestion: LocationSuggestion): string {
   return `${suggestion.name}, ${state}${suggestion.country}`
 }
 
+interface SearchBarProps {
+  /**
+   * Called when the Search button is clicked, with the currently typed
+   * city/country (trimmed). The caller (not this component) owns the
+   * actual `useCurrentWeatherQuery` call and its resulting state — an
+   * empty trimmed city naturally results in a no-op lookup there, since
+   * that hook stays disabled on an empty city, so no separate guard is
+   * needed here.
+   */
+  onSearch: (params: CurrentWeatherSearchParams) => void
+}
+
 /**
  * Search bar for the "Today's Weather" feature. City/Country inputs are
- * controlled and drive a debounced location-suggestions dropdown; Search
- * and Clear are still presentational (wiring them to a real weather lookup
- * is a separate task — see `useCurrentWeatherQuery`).
+ * controlled and drive a debounced location-suggestions dropdown; Clear is
+ * still presentational (wiring it up is a separate task). Search reports
+ * the current input up via `onSearch` — it does not run the weather lookup
+ * itself, keeping this component focused on input/typing/suggestions.
  */
-export function SearchBar() {
+export function SearchBar({ onSearch }: SearchBarProps) {
   const [cityInput, setCityInput] = useState('')
   const [countryInput, setCountryInput] = useState('')
   const [debouncedParams, setDebouncedParams] = useState<LocationSuggestionsQueryParams>({
@@ -80,6 +94,10 @@ export function SearchBar() {
     setCountryInput(value)
     setIsDropdownOpen(true)
     commitDebounced(cityInput, value)
+  }
+
+  function handleSearchClick() {
+    onSearch({ city: cityInput.trim(), country: countryInput.trim() })
   }
 
   function handleSelectSuggestion(suggestion: LocationSuggestion) {
@@ -249,6 +267,7 @@ export function SearchBar() {
         <button
           type="button"
           aria-label="Search"
+          onClick={handleSearchClick}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-md transition hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
         >
           <Search aria-hidden="true" className="h-5 w-5" />
