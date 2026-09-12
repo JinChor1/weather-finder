@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { userEvent } from '@testing-library/user-event'
 import { TodaysWeather } from './TodaysWeather'
+import { useSearchHistoryStore } from '../store/useSearchHistoryStore'
 import type { LocationSuggestion, OpenWeatherApiError } from '../api/openWeatherClient'
 import type { WeatherResultData } from '../schema'
 
@@ -82,13 +83,30 @@ describe('TodaysWeather', () => {
       status: 'pending',
       fetchStatus: 'idle',
     } as SuggestionsResult)
+
+    // `TodaysWeather` reads/writes the real `useSearchHistoryStore` (a
+    // `localStorage`-backed Zustand store, per this repo's convention for
+    // resetting `useThemeStore` in its own tests rather than mocking it) —
+    // reset both so history from one test never leaks into the next.
+    localStorage.clear()
+    act(() => {
+      useSearchHistoryStore.setState({ entries: [] })
+    })
+  })
+
+  afterEach(() => {
+    localStorage.clear()
   })
 
   it('shows an idle prompt before any search has been submitted', () => {
     renderTodaysWeather()
 
     expect(screen.getByText(/search a city, country, or state to see today's weather/i)).toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    // `SearchHistory` also has its own `role="status"` live region (for
+    // history-list mutations, unrelated to the weather lookup, and with no
+    // accessible name to filter `getByRole('status', { name })` on) — assert
+    // on the loading indicator's own text instead of the bare `status` role.
+    expect(screen.queryByText(/loading today's weather/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -96,8 +114,8 @@ describe('TodaysWeather', () => {
     mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isFetching: true }))
     renderTodaysWeather()
 
-    const status = screen.getByRole('status')
-    expect(status).toHaveTextContent(/loading today's weather/i)
+    const status = screen.getByText(/loading today's weather/i)
+    expect(status).toHaveAttribute('role', 'status')
     expect(status).toHaveAttribute('aria-busy', 'true')
   })
 
@@ -150,7 +168,7 @@ describe('TodaysWeather', () => {
     renderTodaysWeather()
 
     expect(screen.getByRole('region', { name: /today's weather/i })).toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByText(/loading today's weather/i)).not.toBeInTheDocument()
   })
 
   it('runs a search when Search is clicked with the typed query', async () => {
@@ -174,5 +192,77 @@ describe('TodaysWeather', () => {
     await user.click(screen.getByRole('button', { name: 'Clear' }))
 
     expect(mockUseCurrentWeatherQuery).toHaveBeenLastCalledWith(null)
+  })
+
+  it('does not resurrect a deleted history entry when the underlying query data reference changes without a new user search', async () => {
+    const user = userEvent.setup()
+    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isSuccess: true, data: { ...weather }, status: 'success' }))
+    const { rerender } = renderTodaysWeather()
+
+    await user.type(screen.getByLabelText('City/Country/State'), 'Johor, MY')
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+
+    expect(useSearchHistoryStore.getState().entries).toHaveLength(1)
+    const entryId = useSearchHistoryStore.getState().entries[0].id
+
+    act(() => {
+      useSearchHistoryStore.getState().removeEntry(entryId)
+    })
+    expect(useSearchHistoryStore.getState().entries).toHaveLength(0)
+
+    // Simulate a passive background refetch (e.g. TanStack Query's
+    // `refetchOnWindowFocus`) resolving with a brand-new `data` object for
+    // the *same* still-submitted query — not a new user-initiated search.
+    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isSuccess: true, data: { ...weather }, status: 'success' }))
+    rerender(<TodaysWeather />)
+
+    expect(useSearchHistoryStore.getState().entries).toHaveLength(0)
+  })
+
+  it('adds a history entry after a successful search, through the real component tree', async () => {
+    const user = userEvent.setup()
+    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isSuccess: true, data: weather, status: 'success' }))
+    renderTodaysWeather()
+
+    expect(screen.getByText('No Record')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('City/Country/State'), 'Johor, MY')
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+
+    expect(screen.queryByText('No Record')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Search again for Johor, MY' })).toBeInTheDocument()
+    expect(useSearchHistoryStore.getState().entries).toEqual([
+      expect.objectContaining({ label: 'Johor, MY', query: 'Johor, MY' }),
+    ])
+  })
+
+  it('re-runs the lookup when "search again" is clicked on a history row', async () => {
+    act(() => {
+      useSearchHistoryStore.setState({
+        entries: [{ id: 'history-1', label: 'Paris, FR', query: 'Paris, Ile-de-France, FR', searchedAt: '2022-01-09T09:41:00Z' }],
+      })
+    })
+    const user = userEvent.setup()
+    renderTodaysWeather()
+
+    await user.click(screen.getByRole('button', { name: 'Search again for Paris, FR' }))
+
+    expect(mockUseCurrentWeatherQuery).toHaveBeenLastCalledWith('Paris, Ile-de-France, FR')
+  })
+
+  it('removes a history entry when its delete button is clicked, and it stays gone', async () => {
+    act(() => {
+      useSearchHistoryStore.setState({
+        entries: [{ id: 'history-1', label: 'Paris, FR', query: 'Paris, FR', searchedAt: '2022-01-09T09:41:00Z' }],
+      })
+    })
+    const user = userEvent.setup()
+    renderTodaysWeather()
+
+    await user.click(screen.getByRole('button', { name: 'Delete Paris, FR from history' }))
+
+    expect(screen.queryByText('Paris, FR')).not.toBeInTheDocument()
+    expect(screen.getByText('No Record')).toBeInTheDocument()
+    expect(useSearchHistoryStore.getState().entries).toHaveLength(0)
   })
 })

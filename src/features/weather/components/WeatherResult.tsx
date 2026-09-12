@@ -1,27 +1,9 @@
 import type { WeatherResultData } from '../schema'
 import { WeatherIcon } from './WeatherIcon'
+import { formatTimestamp } from '../utils/formatTimestamp'
 
 interface WeatherResultProps {
   weather: WeatherResultData
-}
-
-/**
- * Formats an ISO timestamp as "MM-DD-YYYY hh:mm AM/PM", matching the
- * mockup's timestamp style. Uses UTC getters so the displayed time is
- * deterministic regardless of the viewer's/test runner's local timezone.
- */
-function formatObservedAt(observedAt: string): string {
-  const date = new Date(observedAt)
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(date.getUTCDate()).padStart(2, '0')
-  const year = date.getUTCFullYear()
-
-  const hours24 = date.getUTCHours()
-  const period = hours24 >= 12 ? 'PM' : 'AM'
-  const hours12 = String(hours24 % 12 || 12).padStart(2, '0')
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0')
-
-  return `${month}-${day}-${year} ${hours12}:${minutes} ${period}`
 }
 
 /**
@@ -63,7 +45,7 @@ export function WeatherResult({ weather }: WeatherResultProps) {
             <p className="font-semibold text-content">
               {city}, {country}
             </p>
-            <p>{formatObservedAt(observedAt)}</p>
+            <p>{formatTimestamp(observedAt, 'upper-spaced')}</p>
             <p>Humidity: {humidity}%</p>
             <p>{condition}</p>
           </div>

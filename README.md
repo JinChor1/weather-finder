@@ -57,6 +57,15 @@ Fixing this needs a design-team decision — darker token values, and/or a
 guaranteed-opaque text backing instead of relying on the translucent panel
 over a photo — before it lands in code.
 
+`SearchHistory`'s "No Record" empty-state text was switched from
+`text-muted/70` to `text-content` (full opacity) as part of the search-history
+PR's own accessibility review, since stacking `/70` on top of `.glass-panel`'s
+own translucency made that specific spot's contrast clearly worse than the
+rest of the app. This is a real improvement (removes one layer of
+transparency) but isn't a guarantee of 4.5:1 in every case, per the
+`--content`-on-`.glass-panel` finding directly above — the same underlying
+design-team decision would also resolve this instance.
+
 ## Assumptions
 
 - **`temperatureHigh`/`temperatureLow`**: populated from OpenWeatherMap's
@@ -67,3 +76,9 @@ over a photo — before it lands in code.
   temperature exactly. This is a deliberate, stated assumption driven by a
   free-tier API constraint, not a bug: a real daily high/low would require
   the One Call or 5-day/3-hour forecast endpoint instead.
+- **Search history cap (20 entries)**: search history is capped at
+  `MAX_SEARCH_HISTORY_SIZE` (`src/features/weather/store/useSearchHistoryStore.ts`),
+  currently 20. No size is specified in the requirements docs; 20 is a
+  reasonable default (roughly a week's worth of casual daily lookups) that
+  keeps the `localStorage`-persisted payload small. Oldest entries are
+  evicted first once a new search would exceed the cap.
