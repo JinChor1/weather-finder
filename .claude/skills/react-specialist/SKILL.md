@@ -5,9 +5,9 @@ description: React 19 + TypeScript conventions for the weather-finder project �
 
 Follow these rules whenever you implement or modify React code in this project.
 
-## First, verify the stack
+## First, verify the stack and the actual requirements
 
-Read `package.json` (and `CLAUDE.md`'s Architecture section) before writing code — don't assume versions or available libraries. The installed stack is the rule for what to use:
+Read `package.json` and `CLAUDE.md` before writing code — don't assume versions or available libraries. Also read `docs/Requirement.pdf` and `docs/Important_Notes.txt` — this project exists to deliver a specific client-facing feature (the "Today's Weather" feature), and those two files are the authoritative spec, success criteria, and mockups; `CLAUDE.md`'s "Product requirements" section is a pointer/summary, not a substitute. The installed stack is the rule for what to use:
 
 - **React 19** — function components + hooks only; `ref` is a normal prop (no `forwardRef`); reach for `use()`/`useActionState`/`useOptimistic` where they simplify a flow.
 - **TypeScript strict mode** — no `any`; explicit prop types; don't fight the compiler by widening types.
@@ -28,7 +28,9 @@ If a task seems to need something not already installed, flag it before adding a
 2. **Responsive on both mobile and desktop** — use Tailwind's responsive prefixes and actually consider narrow-viewport layout and touch targets, not just how it looks at one size.
 3. **Loading, error, and edge-case states are required, not optional** — for `useQuery`/`useMutation`-backed UI, handle pending/error/empty/success explicitly. For lists: empty and single-item cases. For forms: submitting/disabled/invalid states.
 4. **WCAG 2.2 AA-friendly markup as a baseline** — semantic HTML, labelled inputs, visible focus states, keyboard operability, `aria-*` only where semantics fall short. A separate review agent audits compliance — you don't need to certify it, just not ship obviously inaccessible markup (icon-only buttons with no accessible name, click handlers on bare `div`s, etc.).
-5. **Unit tests for what you build** — after implementing, add Vitest + React Testing Library tests for the behavior that matters (rendering, interaction, hook/validation logic) — use judgment on coverage rather than testing everything. Query by role/label/text, not implementation details. Colocate as `Component.test.tsx` next to `Component.tsx`, matching `src/App.test.tsx`.
+5. **Unit tests for what you build** — after implementing, add Vitest + React Testing Library tests for the behavior that matters (rendering, interaction, hook/validation logic) — use judgment on coverage rather than testing everything. Query by role/label/text, not implementation details. Colocate as `Component.test.tsx` next to `Component.tsx`, matching `src/App.test.tsx`. (Tests are optional/bonus per the requirements document, but the stack is already wired up, so skipping them shouldn't be the default.)
+6. **No unused code or unfinished functions left behind** — an explicit client requirement. Before calling a feature done, remove dead code, unused exports/imports, commented-out attempts, and half-implemented functions.
+7. **Keep the README current** — when a feature adds a setup step (env vars, API keys, etc.) or a behavioral assumption not covered by the spec, update the README's setup instructions/assumptions to match. Keep changes scoped to what the feature actually requires, not a speculative rewrite.
 
 ## Engineering standards
 

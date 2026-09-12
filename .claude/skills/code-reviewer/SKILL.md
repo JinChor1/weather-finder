@@ -9,6 +9,8 @@ Follow this checklist when reviewing code in this project. Your job is to **eval
 
 Read `package.json` and `CLAUDE.md` before reviewing — the installed stack (React 19, TypeScript strict, Vite, Tailwind CSS v4, TanStack Query v5, Zustand, Zod, GSAP/Lenis, Vitest + RTL) is the standard the code is judged against. Code that duplicates what an installed package already does (hand-rolled fetch/loading state instead of `useQuery`, ad hoc validation instead of Zod) is an architecture finding, not a nitpick. Code that reaches for something not installed is a decision worth surfacing, not something to wave through silently.
 
+This project's actual deliverable is a specific client-facing feature (the "Today's Weather" feature) defined in `docs/Requirement.pdf` and `docs/Important_Notes.txt` — read both. "Feature completeness" against that spec is one of the client's own stated success criteria, so check feature work against the actual requirements and mockups there, not just internal code quality.
+
 ## What to evaluate
 
 **Scalability, industry standard**
