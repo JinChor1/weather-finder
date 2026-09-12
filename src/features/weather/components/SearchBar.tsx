@@ -183,7 +183,7 @@ export function SearchBar({ onSearch, onClear }: SearchBarProps) {
             aria-controls={isPanelOpen ? SUGGESTIONS_PANEL_ID : undefined}
             aria-autocomplete="list"
             aria-activedescendant={activeIndex >= 0 ? `${SUGGESTIONS_PANEL_ID}-option-${activeIndex}` : undefined}
-            className="w-full bg-transparent text-sm font-medium text-content placeholder:text-content/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+            className="w-full bg-transparent text-sm font-medium text-content placeholder:text-content/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong rounded-md mt-1"
           />
         </div>
 
