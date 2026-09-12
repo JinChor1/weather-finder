@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { userEvent } from '@testing-library/user-event'
 import { TodaysWeather } from './TodaysWeather'
+import { useSearchHistoryStore } from '../store/useSearchHistoryStore'
 import type { LocationSuggestion, OpenWeatherApiError } from '../api/openWeatherClient'
 import type { WeatherResultData } from '../schema'
 
@@ -174,5 +175,38 @@ describe('TodaysWeather', () => {
     await user.click(screen.getByRole('button', { name: 'Clear' }))
 
     expect(mockUseCurrentWeatherQuery).toHaveBeenLastCalledWith(null)
+  })
+
+  it('does not resurrect a deleted history entry when the underlying query data reference changes without a new user search', async () => {
+    act(() => {
+      useSearchHistoryStore.setState({ entries: [] })
+    })
+
+    const user = userEvent.setup()
+    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isSuccess: true, data: { ...weather }, status: 'success' }))
+    const { rerender } = renderTodaysWeather()
+
+    await user.type(screen.getByLabelText('City/Country/State'), 'Johor, MY')
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+
+    expect(useSearchHistoryStore.getState().entries).toHaveLength(1)
+    const entryId = useSearchHistoryStore.getState().entries[0].id
+
+    act(() => {
+      useSearchHistoryStore.getState().removeEntry(entryId)
+    })
+    expect(useSearchHistoryStore.getState().entries).toHaveLength(0)
+
+    // Simulate a passive background refetch (e.g. TanStack Query's
+    // `refetchOnWindowFocus`) resolving with a brand-new `data` object for
+    // the *same* still-submitted query — not a new user-initiated search.
+    mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isSuccess: true, data: { ...weather }, status: 'success' }))
+    rerender(<TodaysWeather />)
+
+    expect(useSearchHistoryStore.getState().entries).toHaveLength(0)
+
+    act(() => {
+      useSearchHistoryStore.setState({ entries: [] })
+    })
   })
 })

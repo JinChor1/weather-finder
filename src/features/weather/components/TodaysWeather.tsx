@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { SearchBar } from './SearchBar'
 import { WeatherResult } from './WeatherResult'
@@ -25,16 +25,37 @@ export function TodaysWeather() {
   const addHistoryEntry = useSearchHistoryStore((state) => state.addEntry)
   const removeHistoryEntry = useSearchHistoryStore((state) => state.removeEntry)
 
+  // Tracks whether the *currently in-flight/most-recent* query was reached
+  // via an actual user-initiated search (Search click or "search again"),
+  // as opposed to a passive background refetch of the same query (TanStack
+  // Query's default `refetchOnWindowFocus`/`refetchOnReconnect`, not
+  // overridden in `src/main.tsx`). `submitSearch` below sets this to `true`
+  // at the moment of the user's click; the effect clears it back to `false`
+  // once it has recorded that submission's successful result, so a later
+  // background refetch producing a new `weatherQuery.data` object for the
+  // same query does not re-fire history recording — which previously could
+  // silently resurrect an entry the user had just deleted.
+  const hasPendingHistorySubmission = useRef(false)
+
+  function submitSearch(query: string) {
+    hasPendingHistorySubmission.current = true
+    setSearchQuery(query)
+  }
+
   // Synchronizing history (a `localStorage`-backed store, an external system
   // boundary) with the outcome of a query is a legitimate `useEffect` use
   // per this repo's "prefer event handlers, but effects are fine for real
   // synchronization" convention — a plain event-handler callback can't see
-  // *query* success (as opposed to "the click happened"), including a
-  // background refetch resolving. `weatherQuery.data` is keyed in rather
-  // than relying on `status` alone so this only re-fires when the
-  // underlying result actually changes, not on every unrelated re-render.
+  // *query* success (as opposed to "the click happened"). The
+  // `hasPendingHistorySubmission` guard above is what actually ties this to
+  // user intent; `weatherQuery.data` is still keyed in so this re-checks
+  // when a pending submission's result actually arrives, not on every
+  // unrelated re-render.
   useEffect(() => {
     if (weatherQuery.status !== 'success' || !searchQuery) return
+    if (!hasPendingHistorySubmission.current) return
+    hasPendingHistorySubmission.current = false
+
     const { city, country } = weatherQuery.data
     addHistoryEntry({ label: `${city}, ${country}`, query: searchQuery })
   }, [weatherQuery.status, weatherQuery.data, searchQuery, addHistoryEntry])
@@ -42,14 +63,14 @@ export function TodaysWeather() {
   return (
     <>
       {/*
-        "Search again" only re-runs the lookup via `setSearchQuery` — it
-        does not also push the history row's text back into `SearchBar`'s
-        input. `SearchBar` owns its input as internal, uncontrolled state
-        with no `value` prop today, and the mockup doesn't show the input
-        needing to reflect a history row's text, so lifting it to controlled
-        state here would be a bigger change than this feature needs.
+        "Search again" only re-runs the lookup via `submitSearch` — it does
+        not also push the history row's text back into `SearchBar`'s input.
+        `SearchBar` owns its input as internal, uncontrolled state with no
+        `value` prop today, and the mockup doesn't show the input needing to
+        reflect a history row's text, so lifting it to controlled state here
+        would be a bigger change than this feature needs.
       */}
-      <SearchBar onSearch={setSearchQuery} onClear={() => setSearchQuery(null)} />
+      <SearchBar onSearch={submitSearch} onClear={() => setSearchQuery(null)} />
       <div className="mt-6">
         {/*
           Branch off `status` rather than `isFetching` so a background
@@ -97,7 +118,7 @@ export function TodaysWeather() {
           : ''}
       </p>
 
-      <SearchHistory entries={historyEntries} onSearchAgain={setSearchQuery} onDelete={removeHistoryEntry} />
+      <SearchHistory entries={historyEntries} onSearchAgain={submitSearch} onDelete={removeHistoryEntry} />
     </>
   )
 }
