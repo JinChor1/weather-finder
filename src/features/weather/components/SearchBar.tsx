@@ -1,18 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import debounce from 'lodash/debounce'
 import { Loader2, Search, X } from 'lucide-react'
-import {
-  useLocationSuggestionsQuery,
-  MIN_CITY_QUERY_LENGTH,
-  type LocationSuggestionsQueryParams,
-} from '../hooks/useLocationSuggestionsQuery'
-import type { CurrentWeatherSearchParams } from '../hooks/useCurrentWeatherQuery'
+import { useLocationSuggestionsQuery, MIN_SEARCH_QUERY_LENGTH } from '../hooks/useLocationSuggestionsQuery'
 import type { LocationSuggestion } from '../api/openWeatherClient'
 
 /** How long to wait after the user stops typing before refreshing suggestions. */
 const SUGGESTIONS_DEBOUNCE_MS = 350
 
-const SUGGESTIONS_PANEL_ID = 'search-city-suggestions'
+const SUGGESTIONS_PANEL_ID = 'search-location-suggestions'
 
 function suggestionLabel(suggestion: LocationSuggestion): string {
   const state = suggestion.state ? `${suggestion.state}, ` : ''
@@ -22,36 +17,33 @@ function suggestionLabel(suggestion: LocationSuggestion): string {
 interface SearchBarProps {
   /**
    * Called when the Search button is clicked, with the currently typed
-   * city/country (trimmed). The caller (not this component) owns the
-   * actual `useCurrentWeatherQuery` call and its resulting state — an
-   * empty trimmed city naturally results in a no-op lookup there, since
-   * that hook stays disabled on an empty city, so no separate guard is
-   * needed here.
+   * query (trimmed). The caller (not this component) owns the actual
+   * `useCurrentWeatherQuery` call and its resulting state — an empty
+   * trimmed query naturally results in a no-op lookup there, since that
+   * hook stays disabled on an empty query, so no separate guard is needed
+   * here.
    */
-  onSearch: (params: CurrentWeatherSearchParams) => void
+  onSearch: (query: string) => void
 }
 
 /**
- * Search bar for the "Today's Weather" feature. City/Country inputs are
- * controlled and drive a debounced location-suggestions dropdown; Clear is
- * still presentational (wiring it up is a separate task). Search reports
- * the current input up via `onSearch` — it does not run the weather lookup
- * itself, keeping this component focused on input/typing/suggestions.
+ * Search bar for the "Today's Weather" feature. A single free-text
+ * City/Country/State input is controlled and drives a debounced
+ * location-suggestions dropdown; Clear is still presentational (wiring it up
+ * is a separate task). Search reports the current input up via `onSearch` —
+ * it does not run the weather lookup itself, keeping this component focused
+ * on input/typing/suggestions.
  */
 export function SearchBar({ onSearch }: SearchBarProps) {
-  const [cityInput, setCityInput] = useState('')
-  const [countryInput, setCountryInput] = useState('')
-  const [debouncedParams, setDebouncedParams] = useState<LocationSuggestionsQueryParams>({
-    city: '',
-    country: '',
-  })
+  const [queryInput, setQueryInput] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
 
   const fieldsContainerRef = useRef<HTMLDivElement>(null)
 
   const debouncedCommit = useMemo(
-    () => debounce((next: LocationSuggestionsQueryParams) => setDebouncedParams(next), SUGGESTIONS_DEBOUNCE_MS),
+    () => debounce((next: string) => setDebouncedQuery(next), SUGGESTIONS_DEBOUNCE_MS),
     [],
   )
 
@@ -59,13 +51,11 @@ export function SearchBar({ onSearch }: SearchBarProps) {
   // fires, so it never tries to set state on an unmounted component.
   useEffect(() => () => debouncedCommit.cancel(), [debouncedCommit])
 
-  const suggestionsQuery = useLocationSuggestionsQuery(debouncedParams)
+  const suggestionsQuery = useLocationSuggestionsQuery(debouncedQuery)
 
-  const trimmedCity = cityInput.trim()
-  const meetsMinLength = trimmedCity.length >= MIN_CITY_QUERY_LENGTH
-  const isPendingDebounce =
-    meetsMinLength &&
-    (trimmedCity !== debouncedParams.city.trim() || countryInput.trim() !== debouncedParams.country.trim())
+  const trimmedQuery = queryInput.trim()
+  const meetsMinLength = trimmedQuery.length >= MIN_SEARCH_QUERY_LENGTH
+  const isPendingDebounce = meetsMinLength && trimmedQuery !== debouncedQuery.trim()
   const isLoading = isPendingDebounce || suggestionsQuery.isFetching
   const suggestions = suggestionsQuery.data ?? []
   const isPanelOpen = isDropdownOpen && meetsMinLength
@@ -77,39 +67,32 @@ export function SearchBar({ onSearch }: SearchBarProps) {
     panelRole = 'listbox'
   }
 
-  function commitDebounced(city: string, country: string) {
+  function commitDebounced(query: string) {
     setActiveIndex(-1)
-    debouncedCommit({ city, country })
+    debouncedCommit(query)
   }
 
-  function handleCityChange(event: ChangeEvent<HTMLInputElement>) {
+  function handleQueryChange(event: ChangeEvent<HTMLInputElement>) {
     const value = event.target.value
-    setCityInput(value)
+    setQueryInput(value)
     setIsDropdownOpen(true)
-    commitDebounced(value, countryInput)
-  }
-
-  function handleCountryChange(event: ChangeEvent<HTMLInputElement>) {
-    const value = event.target.value
-    setCountryInput(value)
-    setIsDropdownOpen(true)
-    commitDebounced(cityInput, value)
+    commitDebounced(value)
   }
 
   function handleSearchClick() {
-    onSearch({ city: cityInput.trim(), country: countryInput.trim() })
+    onSearch(queryInput.trim())
   }
 
   function handleSelectSuggestion(suggestion: LocationSuggestion) {
-    setCityInput(suggestion.name)
-    setCountryInput(suggestion.country)
+    const label = suggestionLabel(suggestion)
+    setQueryInput(label)
     debouncedCommit.cancel()
-    setDebouncedParams({ city: suggestion.name, country: suggestion.country })
+    setDebouncedQuery(label)
     setIsDropdownOpen(false)
     setActiveIndex(-1)
   }
 
-  function handleCityKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+  function handleQueryKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Escape') {
       setIsDropdownOpen(false)
       setActiveIndex(-1)
@@ -151,7 +134,7 @@ export function SearchBar({ onSearch }: SearchBarProps) {
   return (
     <div
       role="search"
-      aria-label="Search weather by city and country"
+      aria-label="Search weather by city, country, or state"
       // `relative z-20` is load-bearing, not decorative: `.glass-panel`'s
       // `backdrop-blur-md` gives this element its own CSS stacking context
       // (any `backdrop-filter`/`filter`/`transform`/etc. other than the
@@ -167,19 +150,19 @@ export function SearchBar({ onSearch }: SearchBarProps) {
     >
       <div ref={fieldsContainerRef} className="relative flex flex-1 flex-wrap items-center gap-4 sm:flex-nowrap">
         <div className="flex min-w-32 flex-1 flex-col">
-          <label htmlFor="search-city" className="field-label">
-            City
+          <label htmlFor="search-query" className="field-label">
+            City/Country/State
           </label>
           <input
-            id="search-city"
-            name="city"
+            id="search-query"
+            name="query"
             type="text"
-            placeholder="e.g. Johor"
+            placeholder="e.g. Johor Bahru, Johor, MY"
             autoComplete="off"
-            value={cityInput}
-            onChange={handleCityChange}
+            value={queryInput}
+            onChange={handleQueryChange}
             onFocus={() => setIsDropdownOpen(true)}
-            onKeyDown={handleCityKeyDown}
+            onKeyDown={handleQueryKeyDown}
             role="combobox"
             aria-expanded={isPanelOpen}
             aria-controls={SUGGESTIONS_PANEL_ID}
@@ -189,36 +172,11 @@ export function SearchBar({ onSearch }: SearchBarProps) {
           />
         </div>
 
-        <div aria-hidden="true" className="hidden h-8 w-px shrink-0 bg-content/15 sm:block" />
-
-        <div className="flex min-w-32 flex-1 flex-col">
-          <label htmlFor="search-country" className="field-label">
-            Country
-          </label>
-          <input
-            id="search-country"
-            name="country"
-            type="text"
-            placeholder="e.g. MY"
-            autoComplete="off"
-            value={countryInput}
-            onChange={handleCountryChange}
-            onFocus={() => setIsDropdownOpen(true)}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                setIsDropdownOpen(false)
-                setActiveIndex(-1)
-              }
-            }}
-            className="w-full bg-transparent text-sm font-medium text-content placeholder:text-content/40 focus:outline-none"
-          />
-        </div>
-
         {isPanelOpen && (
           <div
             id={SUGGESTIONS_PANEL_ID}
             role={panelRole}
-            aria-label={panelRole === 'listbox' ? 'City suggestions' : undefined}
+            aria-label={panelRole === 'listbox' ? 'Location suggestions' : undefined}
             aria-busy={isLoading}
             className="solid-panel absolute inset-x-0 top-full z-50 mt-2 max-h-64 overflow-y-auto p-2 text-sm text-content"
           >

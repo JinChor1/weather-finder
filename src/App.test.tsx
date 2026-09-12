@@ -14,8 +14,7 @@ describe('App', () => {
       </QueryClientProvider>,
     )
 
-    expect(screen.getByLabelText('City')).toBeInTheDocument()
-    expect(screen.getByLabelText('Country')).toBeInTheDocument()
+    expect(screen.getByLabelText('City/Country/State')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument()
   })

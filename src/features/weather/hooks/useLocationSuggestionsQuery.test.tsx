@@ -34,7 +34,7 @@ describe('useLocationSuggestionsQuery', () => {
   })
 
   it('stays disabled below the minimum query length', () => {
-    const { result } = renderHook(() => useLocationSuggestionsQuery({ city: 'S', country: '' }), {
+    const { result } = renderHook(() => useLocationSuggestionsQuery('S'), {
       wrapper: createWrapper(),
     })
 
@@ -45,7 +45,7 @@ describe('useLocationSuggestionsQuery', () => {
   it('fetches and returns a validated suggestion array once the query is long enough', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(200, rawGeocodingResults))
 
-    const { result } = renderHook(() => useLocationSuggestionsQuery({ city: 'Singa', country: '' }), {
+    const { result } = renderHook(() => useLocationSuggestionsQuery('Singa'), {
       wrapper: createWrapper(),
     })
 
@@ -59,7 +59,7 @@ describe('useLocationSuggestionsQuery', () => {
   it('resolves to an empty array without treating it as an error', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(200, []))
 
-    const { result } = renderHook(() => useLocationSuggestionsQuery({ city: 'Zzzzz', country: '' }), {
+    const { result } = renderHook(() => useLocationSuggestionsQuery('Zzzzz'), {
       wrapper: createWrapper(),
     })
 

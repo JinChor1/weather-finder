@@ -102,21 +102,20 @@ function mapToWeatherResultData(data: ReturnType<typeof currentWeatherResponseSc
 }
 
 /**
- * Looks up current weather for a city + country via the Current Weather
- * Data endpoint, and maps the response into the app's own
- * `WeatherResultData` shape (see `../schema.ts`).
+ * Looks up current weather for a free-text location query (e.g. `"Johor"`,
+ * `"Johor, MY"`, `"Johor Bahru, Johor, MY"`) via the Current Weather Data
+ * endpoint, and maps the response into the app's own `WeatherResultData`
+ * shape (see `../schema.ts`).
  *
- * Throws `OpenWeatherApiError` on any failure: a 404 (city/country not
- * found) maps to `reason: 'not-found'`; anything else (bad key, rate limit,
- * network failure, or a response that doesn't match the expected shape) maps
- * to a different `reason` so callers can tell the two apart.
+ * Throws `OpenWeatherApiError` on any failure: a 404 (location not found)
+ * maps to `reason: 'not-found'`; anything else (bad key, rate limit, network
+ * failure, or a response that doesn't match the expected shape) maps to a
+ * different `reason` so callers can tell the two apart.
  */
-export async function fetchCurrentWeather(city: string, country: string): Promise<WeatherResultData> {
+export async function fetchCurrentWeather(query: string): Promise<WeatherResultData> {
   const apiKey = getApiKey()
-  const trimmedCity = city.trim()
-  const trimmedCountry = country.trim()
-  const query = trimmedCountry ? `${trimmedCity},${trimmedCountry}` : trimmedCity
-  const url = `${CURRENT_WEATHER_URL}?q=${encodeURIComponent(query)}&units=metric&appid=${apiKey}`
+  const trimmedQuery = query.trim()
+  const url = `${CURRENT_WEATHER_URL}?q=${encodeURIComponent(trimmedQuery)}&units=metric&appid=${apiKey}`
 
   const { response, body } = await fetchJson(url)
 
@@ -141,25 +140,23 @@ export async function fetchCurrentWeather(city: string, country: string): Promis
 /**
  * Looks up location suggestions for the search bar's dropdown via the
  * Geocoding API's direct endpoint, given whatever the user has typed so far
- * in the city/country inputs.
+ * into the single search input.
  *
  * Assumption: OpenWeatherMap's geocoding API only exposes a single free-text
- * `q` param that resolves a place name (optionally `"city,countryCode"`) to
- * coordinates — there's no separate country-name lookup. Combining both
- * typed inputs into one `q` string is therefore the correct way to use this
- * API for both fields at once, not a workaround.
+ * `q` param that resolves a place name (optionally `"city,countryCode"` or
+ * `"city,state,countryCode"`) to coordinates — there's no separate
+ * country-name lookup. Passing the raw typed text straight through as `q` is
+ * therefore the correct way to use this API, not a workaround.
  *
  * An empty match array is a valid "no suggestions yet" result, not an
  * error — only network/HTTP/shape failures throw `OpenWeatherApiError`.
  */
-export async function fetchLocationSuggestions(city: string, country: string): Promise<LocationSuggestion[]> {
-  const trimmedCity = city.trim()
-  if (!trimmedCity) return []
+export async function fetchLocationSuggestions(query: string): Promise<LocationSuggestion[]> {
+  const trimmedQuery = query.trim()
+  if (!trimmedQuery) return []
 
   const apiKey = getApiKey()
-  const trimmedCountry = country.trim()
-  const query = trimmedCountry ? `${trimmedCity},${trimmedCountry}` : trimmedCity
-  const url = `${GEOCODING_URL}?q=${encodeURIComponent(query)}&limit=5&appid=${apiKey}`
+  const url = `${GEOCODING_URL}?q=${encodeURIComponent(trimmedQuery)}&limit=5&appid=${apiKey}`
 
   const { response, body } = await fetchJson(url)
 

@@ -47,10 +47,10 @@ describe('useCurrentWeatherQuery', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
-  it('fetches and returns mapped weather data for a valid city/country', async () => {
+  it('fetches and returns mapped weather data for a valid query', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(200, rawCurrentWeather))
 
-    const { result } = renderHook(() => useCurrentWeatherQuery({ city: 'Johor', country: 'MY' }), {
+    const { result } = renderHook(() => useCurrentWeatherQuery('Johor, MY'), {
       wrapper: createWrapper(),
     })
 
@@ -72,7 +72,7 @@ describe('useCurrentWeatherQuery', () => {
   it('surfaces a not-found OpenWeatherApiError without retrying', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(404, { cod: '404', message: 'city not found' }))
 
-    const { result } = renderHook(() => useCurrentWeatherQuery({ city: 'Nowhereville', country: 'ZZ' }), {
+    const { result } = renderHook(() => useCurrentWeatherQuery('Nowhereville, ZZ'), {
       wrapper: createWrapper(),
     })
 

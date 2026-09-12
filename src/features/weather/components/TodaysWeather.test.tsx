@@ -5,32 +5,31 @@ import { render, screen } from '@testing-library/react'
 import { userEvent } from '@testing-library/user-event'
 import { TodaysWeather } from './TodaysWeather'
 import type { LocationSuggestion, OpenWeatherApiError } from '../api/openWeatherClient'
-import type { CurrentWeatherSearchParams } from '../hooks/useCurrentWeatherQuery'
-import type { LocationSuggestionsQueryParams } from '../hooks/useLocationSuggestionsQuery'
 import type { WeatherResultData } from '../schema'
 
 type WeatherResult = UseQueryResult<WeatherResultData, OpenWeatherApiError>
 type SuggestionsResult = UseQueryResult<LocationSuggestion[], OpenWeatherApiError>
 
-const mockUseCurrentWeatherQuery = vi.fn<(params: CurrentWeatherSearchParams | null) => WeatherResult>()
-const mockUseLocationSuggestionsQuery = vi.fn<(params: LocationSuggestionsQueryParams) => SuggestionsResult>()
+const mockUseCurrentWeatherQuery = vi.fn<(query: string | null) => WeatherResult>()
+const mockUseLocationSuggestionsQuery = vi.fn<(query: string) => SuggestionsResult>()
 
 vi.mock('../hooks/useCurrentWeatherQuery', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../hooks/useCurrentWeatherQuery')>()
   return {
     ...actual,
-    useCurrentWeatherQuery: (params: CurrentWeatherSearchParams | null) => mockUseCurrentWeatherQuery(params),
+    useCurrentWeatherQuery: (query: string | null) => mockUseCurrentWeatherQuery(query),
   }
 })
 
 // SearchBar's own suggestions dropdown is not what this file tests — mocked
-// here purely so typing into City/Country during the "runs a search" test
-// below can't trigger a real debounced fetch against `fetchLocationSuggestions`.
+// here purely so typing into the search input during the "runs a search"
+// test below can't trigger a real debounced fetch against
+// `fetchLocationSuggestions`.
 vi.mock('../hooks/useLocationSuggestionsQuery', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../hooks/useLocationSuggestionsQuery')>()
   return {
     ...actual,
-    useLocationSuggestionsQuery: (params: LocationSuggestionsQueryParams) => mockUseLocationSuggestionsQuery(params),
+    useLocationSuggestionsQuery: (query: string) => mockUseLocationSuggestionsQuery(query),
   }
 })
 
@@ -88,7 +87,7 @@ describe('TodaysWeather', () => {
   it('shows an idle prompt before any search has been submitted', () => {
     renderTodaysWeather()
 
-    expect(screen.getByText(/search a city and country to see today's weather/i)).toBeInTheDocument()
+    expect(screen.getByText(/search a city, country, or state to see today's weather/i)).toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
@@ -128,14 +127,13 @@ describe('TodaysWeather', () => {
     expect(screen.getByText('Johor, MY')).toBeInTheDocument()
   })
 
-  it('runs a search when Search is clicked with the typed city/country', async () => {
+  it('runs a search when Search is clicked with the typed query', async () => {
     const user = userEvent.setup()
     renderTodaysWeather()
 
-    await user.type(screen.getByLabelText('City'), 'Johor')
-    await user.type(screen.getByLabelText('Country'), 'MY')
+    await user.type(screen.getByLabelText('City/Country/State'), 'Johor, MY')
     await user.click(screen.getByRole('button', { name: 'Search' }))
 
-    expect(mockUseCurrentWeatherQuery).toHaveBeenLastCalledWith({ city: 'Johor', country: 'MY' })
+    expect(mockUseCurrentWeatherQuery).toHaveBeenLastCalledWith('Johor, MY')
   })
 })

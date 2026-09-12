@@ -4,17 +4,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { SearchBar } from './SearchBar'
 import type { LocationSuggestion, OpenWeatherApiError } from '../api/openWeatherClient'
-import type { LocationSuggestionsQueryParams } from '../hooks/useLocationSuggestionsQuery'
 
 type SuggestionsResult = UseQueryResult<LocationSuggestion[], OpenWeatherApiError>
 
-const mockUseLocationSuggestionsQuery = vi.fn<(params: LocationSuggestionsQueryParams) => SuggestionsResult>()
+const mockUseLocationSuggestionsQuery = vi.fn<(query: string) => SuggestionsResult>()
 
 vi.mock('../hooks/useLocationSuggestionsQuery', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../hooks/useLocationSuggestionsQuery')>()
   return {
     ...actual,
-    useLocationSuggestionsQuery: (params: LocationSuggestionsQueryParams) => mockUseLocationSuggestionsQuery(params),
+    useLocationSuggestionsQuery: (query: string) => mockUseLocationSuggestionsQuery(query),
   }
 })
 
@@ -34,7 +33,7 @@ function makeResult(overrides: Partial<SuggestionsResult>): SuggestionsResult {
   } as SuggestionsResult
 }
 
-function renderSearchBar(onSearch: (params: { city: string; country: string }) => void = vi.fn()) {
+function renderSearchBar(onSearch: (query: string) => void = vi.fn()) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   function Wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -42,9 +41,9 @@ function renderSearchBar(onSearch: (params: { city: string; country: string }) =
   return render(<SearchBar onSearch={onSearch} />, { wrapper: Wrapper })
 }
 
-/** Types into the City input and flushes the debounce so the mocked hook's latest return value drives the UI. */
-function typeCityAndSettle(value: string) {
-  fireEvent.change(screen.getByLabelText('City'), { target: { value } })
+/** Types into the search input and flushes the debounce so the mocked hook's latest return value drives the UI. */
+function typeQueryAndSettle(value: string) {
+  fireEvent.change(screen.getByLabelText('City/Country/State'), { target: { value } })
   act(() => {
     vi.advanceTimersByTime(DEBOUNCE_MS)
   })
@@ -64,10 +63,10 @@ describe('SearchBar', () => {
     vi.useRealTimers()
   })
 
-  it('does not show a dropdown below the minimum city query length', () => {
+  it('does not show a dropdown below the minimum query length', () => {
     renderSearchBar()
 
-    fireEvent.change(screen.getByLabelText('City'), { target: { value: 'J' } })
+    fireEvent.change(screen.getByLabelText('City/Country/State'), { target: { value: 'J' } })
     act(() => {
       vi.advanceTimersByTime(DEBOUNCE_MS)
     })
@@ -80,31 +79,31 @@ describe('SearchBar', () => {
   it('debounces updates so the query only fires after the user stops typing', () => {
     renderSearchBar()
 
-    fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Jo' } })
+    fireEvent.change(screen.getByLabelText('City/Country/State'), { target: { value: 'Jo' } })
     act(() => {
       vi.advanceTimersByTime(DEBOUNCE_MS - 50)
     })
-    fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Johor' } })
+    fireEvent.change(screen.getByLabelText('City/Country/State'), { target: { value: 'Johor' } })
 
     // Still within the debounce window since the last keystroke — the
-    // committed params passed into the hook must not have updated yet.
+    // committed value passed into the hook must not have updated yet.
     act(() => {
       vi.advanceTimersByTime(DEBOUNCE_MS - 50)
     })
-    expect(mockUseLocationSuggestionsQuery).toHaveBeenLastCalledWith({ city: '', country: '' })
+    expect(mockUseLocationSuggestionsQuery).toHaveBeenLastCalledWith('')
 
     // Now past the full delay since the last keystroke.
     act(() => {
       vi.advanceTimersByTime(100)
     })
-    expect(mockUseLocationSuggestionsQuery).toHaveBeenLastCalledWith({ city: 'Johor', country: '' })
+    expect(mockUseLocationSuggestionsQuery).toHaveBeenLastCalledWith('Johor')
   })
 
   it('shows a loading indicator while suggestions are pending', () => {
     mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isFetching: true }))
     renderSearchBar()
 
-    typeCityAndSettle('Sing')
+    typeQueryAndSettle('Sing')
 
     expect(screen.getByRole('status')).toHaveTextContent(/searching locations/i)
   })
@@ -113,9 +112,9 @@ describe('SearchBar', () => {
     renderSearchBar()
 
     // Only 2 characters typed and no timers advanced yet — the hook hasn't
-    // been given the updated params, but the UI should still show it's
+    // been given the updated value, but the UI should still show it's
     // about to look something up rather than nothing at all.
-    fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Si' } })
+    fireEvent.change(screen.getByLabelText('City/Country/State'), { target: { value: 'Si' } })
 
     expect(screen.getByRole('status')).toHaveTextContent(/searching locations/i)
   })
@@ -124,7 +123,7 @@ describe('SearchBar', () => {
     mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isSuccess: true, data: [singapore, johorBahru] }))
     renderSearchBar()
 
-    typeCityAndSettle('Jo')
+    typeQueryAndSettle('Jo')
 
     expect(screen.getByRole('option', { name: 'Singapore, SG' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Johor Bahru, Johor, MY' })).toBeInTheDocument()
@@ -141,9 +140,9 @@ describe('SearchBar', () => {
     mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isSuccess: true, data: [singapore, johorBahru] }))
     renderSearchBar()
 
-    typeCityAndSettle('Jo')
-    const cityInput = screen.getByLabelText('City')
-    fireEvent.keyDown(cityInput, { key: 'ArrowDown' })
+    typeQueryAndSettle('Jo')
+    const queryInput = screen.getByLabelText('City/Country/State')
+    fireEvent.keyDown(queryInput, { key: 'ArrowDown' })
 
     const activeOption = screen.getByRole('option', { name: 'Singapore, SG' })
     const inactiveOption = screen.getByRole('option', { name: 'Johor Bahru, Johor, MY' })
@@ -153,15 +152,14 @@ describe('SearchBar', () => {
     expect(inactiveOption).toHaveClass('hover:bg-secondary')
   })
 
-  it('fills both City and Country when a suggestion is selected, and closes the dropdown', () => {
+  it('fills the input with the exact suggestion label when a suggestion is selected, and closes the dropdown', () => {
     mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isSuccess: true, data: [johorBahru] }))
     renderSearchBar()
 
-    typeCityAndSettle('Jo')
+    typeQueryAndSettle('Jo')
     fireEvent.click(screen.getByRole('option', { name: 'Johor Bahru, Johor, MY' }))
 
-    expect(screen.getByLabelText('City')).toHaveValue('Johor Bahru')
-    expect(screen.getByLabelText('Country')).toHaveValue('MY')
+    expect(screen.getByLabelText('City/Country/State')).toHaveValue('Johor Bahru, Johor, MY')
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 
@@ -169,21 +167,20 @@ describe('SearchBar', () => {
     mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isSuccess: true, data: [singapore, johorBahru] }))
     renderSearchBar()
 
-    typeCityAndSettle('Jo')
-    const cityInput = screen.getByLabelText('City')
-    fireEvent.keyDown(cityInput, { key: 'ArrowDown' })
-    fireEvent.keyDown(cityInput, { key: 'ArrowDown' })
-    fireEvent.keyDown(cityInput, { key: 'Enter' })
+    typeQueryAndSettle('Jo')
+    const queryInput = screen.getByLabelText('City/Country/State')
+    fireEvent.keyDown(queryInput, { key: 'ArrowDown' })
+    fireEvent.keyDown(queryInput, { key: 'ArrowDown' })
+    fireEvent.keyDown(queryInput, { key: 'Enter' })
 
-    expect(screen.getByLabelText('City')).toHaveValue('Johor Bahru')
-    expect(screen.getByLabelText('Country')).toHaveValue('MY')
+    expect(screen.getByLabelText('City/Country/State')).toHaveValue('Johor Bahru, Johor, MY')
   })
 
   it('shows a distinct "no results" message for a valid empty response', () => {
     mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isSuccess: true, data: [] }))
     renderSearchBar()
 
-    typeCityAndSettle('Zzzzz')
+    typeQueryAndSettle('Zzzzz')
 
     expect(screen.getByText(/no matching locations found/i)).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -194,7 +191,7 @@ describe('SearchBar', () => {
     mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isError: true, error }))
     renderSearchBar()
 
-    typeCityAndSettle('Sing')
+    typeQueryAndSettle('Sing')
 
     expect(screen.getByRole('alert')).toHaveTextContent(/couldn't load location suggestions/i)
     expect(screen.queryByText(/no matching locations found/i)).not.toBeInTheDocument()
@@ -204,10 +201,10 @@ describe('SearchBar', () => {
     mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isSuccess: true, data: [singapore] }))
     renderSearchBar()
 
-    typeCityAndSettle('Sing')
+    typeQueryAndSettle('Sing')
     expect(screen.getByRole('listbox')).toBeInTheDocument()
 
-    fireEvent.keyDown(screen.getByLabelText('City'), { key: 'Escape' })
+    fireEvent.keyDown(screen.getByLabelText('City/Country/State'), { key: 'Escape' })
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 
@@ -215,36 +212,34 @@ describe('SearchBar', () => {
     mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isSuccess: true, data: [singapore] }))
     renderSearchBar()
 
-    typeCityAndSettle('Sing')
+    typeQueryAndSettle('Sing')
     expect(screen.getByRole('listbox')).toBeInTheDocument()
 
     fireEvent.mouseDown(document.body)
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 
-  it('calls onSearch with the trimmed city/country when Search is clicked', () => {
+  it('calls onSearch with the trimmed query when Search is clicked', () => {
     const onSearch = vi.fn()
     renderSearchBar(onSearch)
 
-    fireEvent.change(screen.getByLabelText('City'), { target: { value: '  Johor  ' } })
-    fireEvent.change(screen.getByLabelText('Country'), { target: { value: ' MY ' } })
+    fireEvent.change(screen.getByLabelText('City/Country/State'), { target: { value: '  Johor, MY  ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Search' }))
 
     expect(onSearch).toHaveBeenCalledTimes(1)
-    expect(onSearch).toHaveBeenCalledWith({ city: 'Johor', country: 'MY' })
+    expect(onSearch).toHaveBeenCalledWith('Johor, MY')
   })
 
-  it('reports an empty trimmed city as-is on Search, relying on useCurrentWeatherQuery to no-op rather than guarding here', () => {
+  it('reports an empty trimmed query as-is on Search, relying on useCurrentWeatherQuery to no-op rather than guarding here', () => {
     // No explicit "don't call onSearch" guard lives in SearchBar — an empty
-    // trimmed city is reported as-is, and it's `useCurrentWeatherQuery`
+    // trimmed query is reported as-is, and it's `useCurrentWeatherQuery`
     // (owned by the caller) that naturally stays disabled for it, since it
-    // already treats an empty city as `enabled: false`.
+    // already treats an empty query as `enabled: false`.
     const onSearch = vi.fn()
     renderSearchBar(onSearch)
 
-    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'MY' } })
     fireEvent.click(screen.getByRole('button', { name: 'Search' }))
 
-    expect(onSearch).toHaveBeenCalledWith({ city: '', country: 'MY' })
+    expect(onSearch).toHaveBeenCalledWith('')
   })
 })

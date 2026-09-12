@@ -6,37 +6,27 @@ import {
   type OpenWeatherApiError,
 } from '../api/openWeatherClient'
 
-/** Whatever's currently typed into the search bar's city/country inputs. */
-export interface LocationSuggestionsQueryParams {
-  city: string
-  country: string
-}
-
 /**
  * Below this many characters there's not enough to usefully suggest
  * against. Exported so `SearchBar` can gate the dropdown's visibility on
  * the same threshold instead of duplicating the magic number.
  */
-export const MIN_CITY_QUERY_LENGTH = 2
+export const MIN_SEARCH_QUERY_LENGTH = 2
 
 /**
  * Fetches location suggestions for the search bar's dropdown from whatever
- * the user has typed so far. Disabled until the city text reaches
- * `MIN_CITY_QUERY_LENGTH`. Intentionally does not debounce — it fires a
- * request on every qualifying keystroke it's given; `SearchBar` debounces
- * the `city`/`country` values before feeding them into this hook.
+ * free-text query the user has typed so far. Disabled until the trimmed
+ * query reaches `MIN_SEARCH_QUERY_LENGTH`. Intentionally does not debounce —
+ * it fires a request on every qualifying keystroke it's given; `SearchBar`
+ * debounces the query before feeding it into this hook.
  */
-export function useLocationSuggestionsQuery({
-  city,
-  country,
-}: LocationSuggestionsQueryParams): UseQueryResult<LocationSuggestion[], OpenWeatherApiError> {
-  const trimmedCity = city.trim()
-  const trimmedCountry = country.trim()
+export function useLocationSuggestionsQuery(query: string): UseQueryResult<LocationSuggestion[], OpenWeatherApiError> {
+  const trimmedQuery = query.trim()
 
   return useQuery<LocationSuggestion[], OpenWeatherApiError>({
-    queryKey: ['location-suggestions', trimmedCity.toLowerCase(), trimmedCountry.toLowerCase()],
-    queryFn: () => fetchLocationSuggestions(trimmedCity, trimmedCountry),
-    enabled: trimmedCity.length >= MIN_CITY_QUERY_LENGTH,
+    queryKey: ['location-suggestions', trimmedQuery.toLowerCase()],
+    queryFn: () => fetchLocationSuggestions(trimmedQuery),
+    enabled: trimmedQuery.length >= MIN_SEARCH_QUERY_LENGTH,
     retry: shouldRetryOpenWeatherQuery,
   })
 }
