@@ -109,4 +109,38 @@ describe('useSearchHistoryStore', () => {
     expect(entries).toHaveLength(1)
     expect(entries[0].label).toBe('Johor, MY')
   })
+
+  it('falls back to an empty history when the persisted localStorage value does not match the expected shape', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ state: { entries: 'not-an-array' }, version: 0 }))
+    vi.resetModules()
+
+    const { useSearchHistoryStore: freshStore } = await import('./useSearchHistoryStore')
+    expect(freshStore.getState().entries).toEqual([])
+
+    vi.resetModules()
+  })
+
+  it('falls back to an empty history when a persisted entry is missing a required field', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ state: { entries: [{ id: 'a', label: 'Johor, MY', query: 'Johor, MY' }] }, version: 0 }),
+    )
+    vi.resetModules()
+
+    const { useSearchHistoryStore: freshStore } = await import('./useSearchHistoryStore')
+    expect(freshStore.getState().entries).toEqual([])
+
+    vi.resetModules()
+  })
+
+  it('loads a validly-shaped persisted history as-is', async () => {
+    const validEntry = { id: 'a', label: 'Johor, MY', query: 'Johor, MY', searchedAt: '2022-01-09T09:41:00Z' }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ state: { entries: [validEntry] }, version: 0 }))
+    vi.resetModules()
+
+    const { useSearchHistoryStore: freshStore } = await import('./useSearchHistoryStore')
+    expect(freshStore.getState().entries).toEqual([validEntry])
+
+    vi.resetModules()
+  })
 })

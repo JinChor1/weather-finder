@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { z } from 'zod'
 
 /**
  * Maximum number of history rows retained. No number is specified in the
@@ -10,16 +11,32 @@ import { persist } from 'zustand/middleware'
  */
 export const MAX_SEARCH_HISTORY_SIZE = 20
 
-export interface SearchHistoryEntry {
+const searchHistoryEntrySchema = z.object({
   /** Stable id, independent of the entry's content, for row keys/deletes. */
-  id: string
+  id: z.string(),
   /** Display label matching the mockup, e.g. "Johor, MY" (`city, country`). */
-  label: string
+  label: z.string(),
   /** Raw query string to re-run via `useCurrentWeatherQuery` on "search again". */
-  query: string
+  query: z.string(),
   /** ISO 8601 timestamp of when this location was (most recently) searched. */
-  searchedAt: string
-}
+  searchedAt: z.string(),
+})
+
+export type SearchHistoryEntry = z.infer<typeof searchHistoryEntrySchema>
+
+/**
+ * Shape of the slice of state persisted to `localStorage` (see `partialize`/
+ * `merge` below). `localStorage` is a trust boundary per this repo's Zod
+ * rule — it can be hand-edited, or left over from a previous shape of this
+ * store — so it's validated on every rehydration rather than trusted as-is
+ * (unlike `useThemeStore`'s single enum field, `SearchHistoryEntry` is rich
+ * enough that a malformed/legacy blob could otherwise flow straight into the
+ * UI untyped-at-runtime, e.g. rendering "NaN-NaN-NaN NaNam" for a garbage
+ * `searchedAt`).
+ */
+const persistedSearchHistoryStateSchema = z.object({
+  entries: z.array(searchHistoryEntrySchema),
+})
 
 interface SearchHistoryState {
   /** Most-recent-first. Capped at `MAX_SEARCH_HISTORY_SIZE`. */
@@ -82,6 +99,16 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
         }),
       removeEntry: (id) => set((state) => ({ entries: state.entries.filter((entry) => entry.id !== id) })),
     }),
-    { name: 'weather-finder-search-history' },
+    {
+      name: 'weather-finder-search-history',
+      partialize: (state) => ({ entries: state.entries }),
+      // Falls back to an empty history (the store's own initial state)
+      // rather than letting a malformed/legacy `localStorage` value flow
+      // into the UI on a shape mismatch.
+      merge: (persistedState, currentState) => {
+        const result = persistedSearchHistoryStateSchema.safeParse(persistedState)
+        return result.success ? { ...currentState, entries: result.data.entries } : currentState
+      },
+    },
   ),
 )
