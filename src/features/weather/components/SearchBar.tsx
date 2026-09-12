@@ -183,7 +183,7 @@ export function SearchBar({ onSearch, onClear }: SearchBarProps) {
             aria-controls={isPanelOpen ? SUGGESTIONS_PANEL_ID : undefined}
             aria-autocomplete="list"
             aria-activedescendant={activeIndex >= 0 ? `${SUGGESTIONS_PANEL_ID}-option-${activeIndex}` : undefined}
-            className="w-full bg-transparent text-sm font-medium text-content placeholder:text-content/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong rounded-md mt-1"
+            className="w-full bg-transparent text-sm font-medium text-content placeholder:text-content/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring rounded-md mt-1"
           />
         </div>
 
@@ -251,7 +251,7 @@ export function SearchBar({ onSearch, onClear }: SearchBarProps) {
           type="button"
           aria-label="Search"
           onClick={handleSearchClick}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-md transition hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-md transition hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         >
           <Search aria-hidden="true" className="h-5 w-5" />
         </button>

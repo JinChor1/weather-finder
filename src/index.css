@@ -59,6 +59,11 @@
   --danger-border: rgb(244 63 94 / 0.5); /* rose-500 @ 50% */
   --danger-surface: rgb(255 241 242 / 0.8); /* rose-50 @ 80% */
   --danger-muted: rgb(159 18 57 / 0.9); /* rose-800 @ 90% */
+
+  /* Focus-visible outline color. `--color-primary-strong` already reads
+     fine here (~9.7:1 against --surface-solid), so this just reuses it —
+     see the `.dark` override below for why this can't be shared as-is. */
+  --focus-ring: var(--color-primary-strong);
 }
 
 .dark {
@@ -86,6 +91,13 @@
   --danger-border: rgb(244 63 94 / 0.4); /* rose-500 @ 40% */
   --danger-surface: rgb(76 5 25 / 0.5); /* rose-950 @ 50% */
   --danger-muted: rgb(254 205 211 / 0.8); /* rose-200 @ 80% */
+
+  /* `--color-primary-strong` (#4c2d7f) computes to only ~1.5:1 against this
+     theme's `--surface-solid` (#2a1b45) — both are dark, so a dark-purple
+     focus ring is nearly invisible here. A light lavender clears WCAG
+     1.4.11's 3:1 non-text-contrast target with plenty of margin (~8.5:1)
+     while still reading as an accent color rather than plain white. */
+  --focus-ring: #c4b5fd; /* violet-300 */
 }
 
 @theme inline {
@@ -107,6 +119,8 @@
   --color-danger-border: var(--danger-border);
   --color-danger-surface: var(--danger-surface);
   --color-danger-muted: var(--danger-muted);
+
+  --color-focus-ring: var(--focus-ring);
 }
 
 /*
@@ -134,7 +148,7 @@
   /* Circular icon-only button, shared by SearchBar's Clear button and
      ThemeToggle. */
   .icon-button {
-    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-content/15 bg-icon-surface text-icon-content shadow-sm transition hover:bg-icon-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-content/15 bg-icon-surface text-icon-content shadow-sm transition hover:bg-icon-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring;
   }
 
   /* Small field label used above the City/Country inputs. */
