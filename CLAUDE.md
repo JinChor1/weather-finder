@@ -30,7 +30,7 @@ Condensed requirements (see the source docs for the authoritative wording and mo
 4. **Search history persists across a page refresh** — no backend exists, so this implies `localStorage` or similar, to be decided when the feature is actually built.
 5. Invalid city/country or an API error must show a **clear, visible message** (mockup shows a "Not found" banner and a "No Record" empty state for history).
 6. **Responsive**: desktop and mobile mockups are both provided and must both work.
-7. Ship **at least one** of light/dark theme; both themes **with a switcher is optional/bonus**, not required.
+7. Both light and dark themes are implemented, with a switcher (the requirement's bonus option, now decided) — see the **Theming** section below for the standing architecture; all future UI work must support both themes, not just the one it was designed against.
 8. **Loading states and edge cases are required**, not optional (empty history, invalid input, API failure, etc.).
 9. `npm run lint`, `npm run typecheck`, and `npm run build` must all pass **with no errors**, and unused code / unfinished functions must be removed before calling something done.
 10. The **README** needs clear setup instructions and stated assumptions. (The requirements document separately suggests putting UI-behavior assumptions in "a separate document" — where exactly assumptions get written is an open question to settle when we get there, not decided yet.)
@@ -39,7 +39,7 @@ Condensed requirements (see the source docs for the authoritative wording and mo
 The client's stated success criteria (feature completeness, code readability, web standards compliance, reusability/extendibility, responsive compatibility, UI/UX quality) are exactly what the `react-specialist` / `code-reviewer` / `a11y-auditor` agents below already enforce — this feature is the concrete thing they'll all end up working on.
 
 **Design assets** (`public/`) — the mockup's actual art, matching `docs/Requirement.pdf`:
-- `bg-light.png` / `bg-dark.png` — full-bleed purple cloudy-sky background images for the light and dark theme respectively (see requirement 7 above — at least one is used; both implies the theme switcher swaps between them).
+- `bg-light.png` / `bg-dark.png` — full-bleed purple cloudy-sky background images for the light and dark theme respectively; both are in use, swapped by the theme switcher (see **Theming** below).
 - `cloud.png` / `sun.png` — the weather condition icon glyphs from the mockup (a rain cloud, and a cloud-over-sun combo) — presumably the start of a small icon set for mapping OpenWeatherMap conditions to an illustration; more conditions may need equivalent art later (clear, thunderstorm, snow, etc.) if the API returns something these two don't cover.
 - `favicon.svg` — the default Vite placeholder favicon, unrelated to the mockup; still pending a real favicon.
 
@@ -89,6 +89,18 @@ No routing or feature pages exist yet — `src/App.tsx` currently just calls `us
 
 The app has no established feature structure yet. Default to a feature-based layout under `src/features/<feature>/` (components/hooks/schema/store as needed) once there's more than a couple of components, rather than one flat `src/components` bucket — but don't restructure existing code as a side effect of an unrelated task.
 
+- `src/features/weather/` — the "Today's Weather" feature (search bar, and whatever weather-display/search-history components/hooks/schema land here as they're built).
+- `src/features/theme/` — light/dark theme switching, scoped as its own small feature since it's cross-cutting UI state rather than part of any one feature. See **Theming** below.
+
+## Theming
+
+Both light and dark themes are implemented, switched manually by the user rather than following OS preference alone (requirement 7):
+
+- **State**: `src/features/theme/store/useThemeStore.ts` — a Zustand store using the `persist` middleware (`zustand/middleware`, already part of the `zustand` package — no new dependency) to save the choice to `localStorage`. Holds `theme: 'light' | 'dark'` and a `toggleTheme` action. Falls back to `prefers-color-scheme` only the first time there's no stored preference. This store is the canonical example of the stack table's "small, feature-scoped store" rule for Zustand — don't fold unrelated state into it, and don't spin up a second global-ish store for some other cross-cutting concern without the same justification.
+- **Applying the theme**: the stored `theme` is synced onto a `dark` class on `<html>`, and Tailwind is configured for **class-based** dark mode via `@custom-variant dark (&:where(.dark, .dark *));` in `src/index.css` — this overrides Tailwind v4's default (`prefers-color-scheme`-only) behavior so the `dark:` variant follows the switcher, not just the OS. Don't add a `tailwind.config.js` for this; the CSS-first `@custom-variant` directive is the v4-native way and keeps the "no config file" stack rule intact.
+- **Switcher**: `src/features/theme/components/ThemeToggle.tsx` — a button (sun/moon icon) that calls `toggleTheme`.
+- **Standing rule for all UI work from here on**: style every new color/background/border with a `dark:` counterpart (unless the value is genuinely theme-invariant, e.g. a pure white icon on a colored circle that doesn't change). Shipping light-only (or dark-only) styling on new UI is no longer acceptable now that the switcher exists — `react-specialist` and anyone writing UI directly should treat this the same as the existing loading/error/edge-case and accessibility baselines: required, not optional. `code-reviewer` and `a11y-auditor` should flag UI that skips a `dark:` counterpart.
+
 ## Testing
 
 Vitest + React Testing Library, configured via the `test` block in `vite.config.ts` (jsdom environment, `globals: true`, setup file `src/test/setup.ts`). The setup file loads `@testing-library/jest-dom/vitest` matchers and polyfills `matchMedia`/`ResizeObserver`, which jsdom lacks but GSAP's `ScrollTrigger` and Lenis both need to initialize.
@@ -107,6 +119,7 @@ These apply regardless of which agent/skill (or you, directly) is writing the co
 - **Performance**: don't reach for `useMemo`/`useCallback`/`React.memo` by default — only when there's an actual re-render or cost problem.
 - **Loading/error/edge cases are required, not optional**: anything backed by `useQuery`/`useMutation` needs explicit pending/error/empty/success handling, not just the happy path.
 - **Accessibility baseline**: semantic HTML, labelled form controls, visible focus states, keyboard operability — a WCAG 2.2 AA-friendly baseline is expected from whoever writes UI code, even though auditing/certifying compliance is a separate agent's job (see below).
+- **Theming**: every new color/background/border utility needs a `dark:` counterpart — see **Theming** above. Required, not optional, now that the theme switcher exists.
 - **Definition of done**: `npm run lint`, `npm run typecheck`, and `npm run test` should all pass before a task is considered finished — this mirrors what the pre-commit hook enforces (minus tests, which aren't hooked in yet).
 
 ## Custom agents and skills
