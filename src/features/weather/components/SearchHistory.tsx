@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { Search, Trash2 } from 'lucide-react'
 import type { SearchHistoryEntry } from '../store/useSearchHistoryStore'
+import { formatTimestamp } from '../utils/formatTimestamp'
 
 /** How many rows are visible initially, and how many more "Show more" reveals each click. */
 const HISTORY_PAGE_SIZE = 5
@@ -18,28 +19,6 @@ interface SearchHistoryProps {
  * once the resulting re-render has actually happened.
  */
 type PendingFocusTarget = { type: 'row'; id: string } | { type: 'list' } | { type: 'empty' }
-
-/**
- * Formats an ISO timestamp as "MM-DD-YYYY hh:mmam/pm", matching the
- * mockup's history-row timestamp style (`WeatherResult`'s equivalent
- * formatter uses the same UTC-getter approach for a deterministic display
- * regardless of the viewer's/test runner's local timezone, but keeps
- * `AM`/`PM` uppercase with a space — this one follows the history mockup's
- * own lowercase, no-space style instead, e.g. "01-09-2022 09:41am").
- */
-function formatSearchedAt(searchedAt: string): string {
-  const date = new Date(searchedAt)
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(date.getUTCDate()).padStart(2, '0')
-  const year = date.getUTCFullYear()
-
-  const hours24 = date.getUTCHours()
-  const period = hours24 >= 12 ? 'pm' : 'am'
-  const hours12 = String(hours24 % 12 || 12).padStart(2, '0')
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0')
-
-  return `${month}-${day}-${year} ${hours12}:${minutes}${period}`
-}
 
 /**
  * "Search History" panel below the weather result. Shows up to
@@ -171,7 +150,7 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
                   <p className="truncate font-semibold" title={entry.label}>
                     {entry.label}
                   </p>
-                  <p className="text-sm text-muted/80">{formatSearchedAt(entry.searchedAt)}</p>
+                  <p className="text-sm text-muted/80">{formatTimestamp(entry.searchedAt, 'lower-compact')}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button
