@@ -64,6 +64,16 @@
      fine here (~9.7:1 against --surface-solid), so this just reuses it —
      see the `.dark` override below for why this can't be shared as-is. */
   --focus-ring: var(--color-primary-strong);
+
+  /* Search input placeholder color. A muted, desaturated lavender rather
+     than an opacity modifier on `--content` (#6C40B5): alpha-blending
+     `--content` down to `/60` (the previous fix) only reaches ~2.75:1
+     against `--surface-solid`, and even pushing that modifier to `/85`
+     (the minimum that clears 4.5:1) reads as barely distinguishable from
+     real typed input text. This solid color clears 4.5:1 with real margin
+     (~4.8:1 against --surface-solid) while staying visibly dimmer/grayer
+     than --content. */
+  --placeholder: #75658f;
 }
 
 .dark {
@@ -98,6 +108,14 @@
      1.4.11's 3:1 non-text-contrast target with plenty of margin (~8.5:1)
      while still reading as an accent color rather than plain white. */
   --focus-ring: #c4b5fd; /* violet-300 */
+
+  /* Same reasoning as the light-mode value above, mirrored for dark:
+     alpha-blending --content (#ffffff) down to /60 already clears 4.5:1
+     here (~6.5:1), but a solid muted lavender keeps the placeholder
+     visually consistent with its light-mode counterpart and clearly
+     dimmer than full-white real input text (~6.2:1 against
+     --surface-solid). */
+  --placeholder: #a99ec0;
 }
 
 @theme inline {
@@ -121,6 +139,7 @@
   --color-danger-muted: var(--danger-muted);
 
   --color-focus-ring: var(--focus-ring);
+  --color-placeholder: var(--placeholder);
 }
 
 /*
