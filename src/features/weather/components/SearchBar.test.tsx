@@ -130,6 +130,29 @@ describe('SearchBar', () => {
     expect(screen.getByRole('option', { name: 'Johor Bahru, Johor, MY' })).toBeInTheDocument()
   })
 
+  it('keeps the hover-highlight class on every row regardless of keyboard-active state', () => {
+    // Regression test for a bug where the CSS `:hover` utility was only
+    // applied to rows that were *not* the keyboard-active row (mutually
+    // exclusive ternary), so native mouse-hover feedback silently
+    // disappeared for whichever row `activeIndex` currently pointed at.
+    // jsdom can't simulate the `:hover` pseudo-class actually painting, but
+    // it can assert the hover utility class itself is never conditionally
+    // removed based on `activeIndex`.
+    mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isSuccess: true, data: [singapore, johorBahru] }))
+    renderSearchBar()
+
+    typeCityAndSettle('Jo')
+    const cityInput = screen.getByLabelText('City')
+    fireEvent.keyDown(cityInput, { key: 'ArrowDown' })
+
+    const activeOption = screen.getByRole('option', { name: 'Singapore, SG' })
+    const inactiveOption = screen.getByRole('option', { name: 'Johor Bahru, Johor, MY' })
+
+    expect(activeOption).toHaveClass('hover:bg-secondary')
+    expect(activeOption).toHaveClass('bg-secondary')
+    expect(inactiveOption).toHaveClass('hover:bg-secondary')
+  })
+
   it('fills both City and Country when a suggestion is selected, and closes the dropdown', () => {
     mockUseLocationSuggestionsQuery.mockReturnValue(makeResult({ isSuccess: true, data: [johorBahru] }))
     renderSearchBar()

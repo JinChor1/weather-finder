@@ -45,7 +45,14 @@
   --icon-surface-hover: rgb(255 255 255 / 1);
 
   --surface-glass: rgb(255 255 255 / 0.3);
+  --surface-solid: #f7f4fc; /* opaque version of --surface-glass, same white-with-purple-tint family, alpha pushed to 1 */
   --glass: rgb(255 255 255 / 0.4); /* glass panel ring */
+
+  /* Hover/keyboard-active highlight for rows sitting on `.solid-panel`
+     (SearchBar's suggestion list). A light tint of --color-primary so it
+     reads clearly against the near-white --surface-solid while --content
+     (also #6C40B5 in light mode) stays legible on top. */
+  --secondary: color-mix(in srgb, var(--color-primary) 20%, white);
 
   --danger-content: #881337; /* rose-900 */
   --danger-icon: #e11d48; /* rose-600 */
@@ -64,7 +71,15 @@
   --icon-surface-hover: rgb(255 255 255 / 0.2);
 
   --surface-glass: rgb(0 0 0 / 0.3);
+  --surface-solid: #2a1b45; /* opaque version of --surface-glass, same near-black-with-purple-tint family, alpha pushed to 1 */
   --glass: rgb(255 255 255 / 0.1);
+
+  /* Unlike the light-mode tint above, --content is #ffffff in dark mode, so
+     a *light* purple would put white-on-light-purple (poor contrast).
+     Mixed mostly toward --color-primary instead of white, this lands as a
+     mid-tone purple between --surface-solid and --color-primary — clearly
+     visible against the dark panel while keeping white text legible on top. */
+  --secondary: color-mix(in srgb, var(--color-primary) 75%, var(--surface-solid) 25%);
 
   --danger-content: #ffe4e6; /* rose-100 */
   --danger-icon: #fda4af; /* rose-300 */
@@ -83,7 +98,9 @@
   --color-icon-surface-hover: var(--icon-surface-hover);
 
   --color-surface-glass: var(--surface-glass);
+  --color-surface-solid: var(--surface-solid);
   --color-glass: var(--glass);
+  --color-secondary: var(--secondary);
 
   --color-danger-content: var(--danger-content);
   --color-danger-icon: var(--danger-icon);
@@ -103,6 +120,15 @@
      each consumer since those genuinely differ per usage. */
   .glass-panel {
     @apply rounded-3xl bg-surface-glass shadow-lg ring-1 ring-glass backdrop-blur-md;
+  }
+
+  /* Same shape/shadow/ring treatment as .glass-panel, but with a fully
+     opaque background and no backdrop-blur (pointless once the background
+     is opaque). Used where content sitting on top needs guaranteed
+     contrast instead of blending with whatever's behind it — e.g.
+     SearchBar's suggestions dropdown, which can render above WeatherResult. */
+  .solid-panel {
+    @apply rounded-3xl bg-surface-solid shadow-lg ring-1 ring-glass;
   }
 
   /* Circular icon-only button, shared by SearchBar's Clear button and

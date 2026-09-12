@@ -134,7 +134,18 @@ export function SearchBar() {
     <div
       role="search"
       aria-label="Search weather by city and country"
-      className="glass-panel mx-auto flex w-full max-w-2xl flex-wrap items-center gap-4 p-4 sm:flex-nowrap sm:rounded-full sm:gap-3 sm:py-2 sm:pl-6 sm:pr-2"
+      // `relative z-20` is load-bearing, not decorative: `.glass-panel`'s
+      // `backdrop-blur-md` gives this element its own CSS stacking context
+      // (any `backdrop-filter`/`filter`/`transform`/etc. other than the
+      // initial value does), as does WeatherResult's own `.glass-panel`
+      // card. Without an explicit `position` + `z-index` here, this stacking
+      // context has no z-index of its own and is ordered against
+      // WeatherResult's purely by DOM order — so the suggestions dropdown's
+      // `z-50` (below) only ever wins against siblings *inside* this same
+      // context, and WeatherResult (rendered after this component) paints
+      // over the whole thing regardless of the dropdown's own z-index.
+      // Do not remove this as "redundant" without re-checking that.
+      className="glass-panel relative z-20 mx-auto flex w-full max-w-2xl flex-wrap items-center gap-4 p-4 sm:flex-nowrap sm:rounded-full sm:gap-3 sm:py-2 sm:pl-6 sm:pr-2"
     >
       <div ref={fieldsContainerRef} className="relative flex flex-1 flex-wrap items-center gap-4 sm:flex-nowrap">
         <div className="flex min-w-32 flex-1 flex-col">
@@ -191,7 +202,7 @@ export function SearchBar() {
             role={panelRole}
             aria-label={panelRole === 'listbox' ? 'City suggestions' : undefined}
             aria-busy={isLoading}
-            className="glass-panel absolute inset-x-0 top-full z-20 mt-2 max-h-64 overflow-y-auto p-2 text-sm text-content"
+            className="solid-panel absolute inset-x-0 top-full z-50 mt-2 max-h-64 overflow-y-auto p-2 text-sm text-content"
           >
             {isLoading && (
               <div className="flex items-center gap-2 p-2 text-muted">
@@ -220,8 +231,8 @@ export function SearchBar() {
                   aria-selected={index === activeIndex}
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => handleSelectSuggestion(suggestion)}
-                  className={`cursor-pointer rounded-xl p-2 transition ${
-                    index === activeIndex ? 'bg-icon-surface-hover' : 'hover:bg-icon-surface'
+                  className={`cursor-pointer rounded-xl p-2 transition hover:bg-secondary ${
+                    index === activeIndex ? 'bg-secondary' : ''
                   }`}
                 >
                   {suggestionLabel(suggestion)}
