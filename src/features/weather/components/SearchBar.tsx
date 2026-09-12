@@ -233,7 +233,17 @@ export function SearchBar({ onSearch, onClear }: SearchBarProps) {
         )}
       </div>
 
-      <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+      {/*
+        `relative focus-within:z-[60]` keeps whichever button currently has
+        keyboard focus above the suggestions dropdown's `z-50` panel — on
+        narrow viewports this row wraps below the input, and an open
+        dropdown can otherwise render over it, hiding the focus ring when
+        tabbing from the input to Clear/Search. This doesn't change the
+        `role="search"` container's own `relative z-20` stacking-context
+        rationale above; it's a separate, smaller stacking fix scoped to
+        this row.
+      */}
+      <div className="relative flex w-full items-center justify-end gap-2 focus-within:z-[60] sm:w-auto">
         <button type="button" aria-label="Clear" onClick={handleClearClick} className="icon-button">
           <X aria-hidden="true" className="h-5 w-5" />
         </button>
