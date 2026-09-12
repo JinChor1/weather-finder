@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Search, Trash2 } from 'lucide-react'
 import type { SearchHistoryEntry } from '../store/useSearchHistoryStore'
 
@@ -10,6 +10,14 @@ interface SearchHistoryProps {
   onSearchAgain: (query: string) => void
   onDelete: (id: string) => void
 }
+
+/**
+ * Where focus should land after a DOM removal this component triggers
+ * (deleting a row, or "Show more" unmounting itself once every entry is
+ * shown) — computed at the moment of the triggering click, then applied
+ * once the resulting re-render has actually happened.
+ */
+type PendingFocusTarget = { type: 'row'; id: string } | { type: 'list' } | { type: 'empty' }
 
 /**
  * Formats an ISO timestamp as "MM-DD-YYYY hh:mmam/pm", matching the
@@ -52,15 +60,86 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
   const visibleEntries = entries.slice(0, shownCount)
   const hasMore = shownCount < entries.length
 
+  const listRef = useRef<HTMLUListElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const deleteButtonRefs = useRef(new Map<string, HTMLButtonElement>())
+  const pendingFocusRef = useRef<PendingFocusTarget | null>(null)
+
+  // Deleting a row (or "Show more" revealing the final page) removes a
+  // focused element from the DOM with no help from the browser — focus
+  // would otherwise silently drop to `<body>`. The click handlers below
+  // record *where* focus should go next before triggering the removal;
+  // this effect applies it once the removal has actually rendered. DOM
+  // focus is an external system, so synchronizing it here (rather than in
+  // an event handler) matches this repo's `useEffect` convention —
+  // `useLayoutEffect` specifically so the move happens before the browser
+  // paints the post-removal frame.
+  useLayoutEffect(() => {
+    const pending = pendingFocusRef.current
+    if (!pending) return
+    pendingFocusRef.current = null
+
+    if (pending.type === 'row') {
+      const button = deleteButtonRefs.current.get(pending.id)
+      if (button) {
+        button.focus()
+        return
+      }
+    }
+
+    if (pending.type === 'list') {
+      listRef.current?.focus()
+      return
+    }
+
+    headingRef.current?.focus()
+  }, [entries, visibleCount])
+
+  function registerDeleteButtonRef(id: string, node: HTMLButtonElement | null) {
+    if (node) {
+      deleteButtonRefs.current.set(id, node)
+    } else {
+      deleteButtonRefs.current.delete(id)
+    }
+  }
+
+  function handleDelete(id: string) {
+    const index = entries.findIndex((entry) => entry.id === id)
+    const nextEntry = index >= 0 && index + 1 < shownCount ? entries[index + 1] : undefined
+    const previousEntry = !nextEntry && index > 0 ? entries[index - 1] : undefined
+    const target = nextEntry ?? previousEntry
+
+    pendingFocusRef.current = target ? { type: 'row', id: target.id } : { type: 'empty' }
+    onDelete(id)
+  }
+
+  function handleShowMore() {
+    const nextShownCount = Math.min(visibleCount + HISTORY_PAGE_SIZE, entries.length)
+    // Once this click reveals every remaining entry, the button itself is
+    // about to unmount (see `hasMore` above) — move focus to the list
+    // container instead of letting it drop to `<body>`. Otherwise the
+    // button stays mounted and keeps its own focus naturally.
+    if (nextShownCount >= entries.length) {
+      pendingFocusRef.current = { type: 'list' }
+    }
+    setVisibleCount((count) => count + HISTORY_PAGE_SIZE)
+  }
+
   return (
     <section aria-label="Search history" className="glass-panel mx-auto mt-6 w-full max-w-2xl p-6 text-content">
-      <h2 className="eyebrow-label mb-4">Search History</h2>
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
+        className="eyebrow-label mb-4 rounded-sm focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-focus-ring"
+      >
+        Search History
+      </h2>
 
       {entries.length === 0 ? (
         <p className="py-6 text-center text-sm font-medium text-muted/70">No Record</p>
       ) : (
         <>
-          <ul className="divide-y divide-content/10">
+          <ul ref={listRef} tabIndex={-1} className="divide-y divide-content/10 focus:outline-none">
             {visibleEntries.map((entry) => (
               <li key={entry.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
@@ -78,8 +157,9 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
                   </button>
                   <button
                     type="button"
+                    ref={(node) => registerDeleteButtonRef(entry.id, node)}
                     aria-label={`Delete ${entry.label} from history`}
-                    onClick={() => onDelete(entry.id)}
+                    onClick={() => handleDelete(entry.id)}
                     className="icon-button h-9 w-9"
                   >
                     <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -93,7 +173,7 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
             <div className="mt-4 flex justify-center">
               <button
                 type="button"
-                onClick={() => setVisibleCount((count) => count + HISTORY_PAGE_SIZE)}
+                onClick={handleShowMore}
                 className="rounded-full px-4 py-2 text-sm font-semibold text-primary transition hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               >
                 Show more
