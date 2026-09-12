@@ -176,7 +176,7 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
                     type="button"
                     aria-label={`Search again for ${entry.label}`}
                     onClick={() => onSearchAgain(entry.query)}
-                    className="icon-button h-9 w-9"
+                    className="icon-button"
                   >
                     <Search aria-hidden="true" className="h-4 w-4" />
                   </button>
@@ -185,7 +185,7 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
                     ref={(node) => registerDeleteButtonRef(entry.id, node)}
                     aria-label={`Delete ${entry.label} from history`}
                     onClick={() => handleDelete(entry.id)}
-                    className="icon-button h-9 w-9"
+                    className="icon-button"
                   >
                     <Trash2 aria-hidden="true" className="h-4 w-4" />
                   </button>
