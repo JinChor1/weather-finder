@@ -1,3 +1,4 @@
+import type { Ref } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import type { OpenWeatherErrorReason } from '../api/openWeatherClient'
 
@@ -9,6 +10,16 @@ interface NotFoundBannerProps {
    * of misleadingly claiming the city wasn't found.
    */
   reason?: OpenWeatherErrorReason
+  /**
+   * Forwarded to the inner icon+text content wrapper — deliberately *not*
+   * the root `<div>`, which carries this banner's own border/background/
+   * shadow chrome. `TodaysWeather` attaches `useContentTransition`'s ref
+   * here so a changing error reason cross-fades its content while the
+   * bordered box itself renders instantly at its (resized) dimensions with
+   * no motion of its own. React 19 supports `ref` as a plain prop, no
+   * `forwardRef` needed.
+   */
+  ref?: Ref<HTMLDivElement>
 }
 
 const COPY_BY_REASON: Record<OpenWeatherErrorReason, { title: string; message: string }> = {
@@ -47,18 +58,20 @@ const COPY_BY_REASON: Record<OpenWeatherErrorReason, { title: string; message: s
  *
  * `role="alert"` ensures assistive tech announces whichever copy is shown.
  */
-export function NotFoundBanner({ reason = 'not-found' }: NotFoundBannerProps) {
+export function NotFoundBanner({ reason = 'not-found', ref }: NotFoundBannerProps) {
   const { title, message } = COPY_BY_REASON[reason]
 
   return (
     <div
       role="alert"
-      className="mx-auto flex w-full max-w-2xl items-start gap-3 rounded-3xl border border-danger-border bg-danger-surface p-4 text-danger-content shadow-lg backdrop-blur-md"
+      className="mx-auto w-full max-w-2xl rounded-3xl border border-danger-border bg-danger-surface p-4 text-danger-content shadow-lg backdrop-blur-md"
     >
-      <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-danger-icon" />
-      <div>
-        <p className="font-semibold">{title}</p>
-        <p className="text-sm text-danger-muted">{message}</p>
+      <div ref={ref} className="flex items-start gap-3">
+        <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-danger-icon" />
+        <div>
+          <p className="font-semibold">{title}</p>
+          <p className="text-sm text-danger-muted">{message}</p>
+        </div>
       </div>
     </div>
   )

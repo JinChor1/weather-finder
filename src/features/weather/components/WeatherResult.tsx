@@ -1,9 +1,21 @@
+import type { Ref } from 'react'
 import type { WeatherResultData } from '../schema'
 import { WeatherIcon } from './WeatherIcon'
 import { formatTimestamp } from '../utils/formatTimestamp'
 
 interface WeatherResultProps {
   weather: WeatherResultData
+  /**
+   * Forwarded to the inner temperature/meta content block — deliberately
+   * *not* the root `<section>` or the `.glass-panel` card div one level in,
+   * both of which are purely layout/chrome with no content-transition of
+   * their own. `TodaysWeather` attaches `useContentTransition`'s ref here so
+   * that when the result changes (a new search), only this content
+   * cross-fades — the card's border/background/shadow render instantly at
+   * their new (resized) dimensions with no motion. React 19 supports `ref`
+   * as a plain prop, no `forwardRef` needed.
+   */
+  ref?: Ref<HTMLDivElement>
 }
 
 /**
@@ -18,21 +30,24 @@ interface WeatherResultProps {
  * right-aligned) collapsing into a stacked block with a wrapping meta row
  * from `sm:` up, matching the mobile vs. desktop mockups' hierarchy.
  */
-export function WeatherResult({ weather }: WeatherResultProps) {
+export function WeatherResult({ weather, ref }: WeatherResultProps) {
   const { city, country, condition, description, temperature, temperatureHigh, temperatureLow, humidity, observedAt } =
     weather
 
   return (
-    <section
-      aria-label="Today's weather"
-      className="relative mx-auto w-full max-w-2xl pt-14 pb-2 text-content sm:pt-24"
-    >
+    <section aria-label="Today's weather" className="relative mx-auto w-full max-w-2xl pt-14 pb-2 text-content sm:pt-24">
       <div className="glass-panel relative p-6">
         <div className="absolute -top-12 right-2 h-32 w-32 sm:-top-20 sm:right-6 sm:h-56 sm:w-56">
           <WeatherIcon description={description} className="h-full w-full drop-shadow-lg" />
         </div>
 
-        <div className="grid grid-cols-[1fr_auto] items-start gap-x-4 sm:block ">
+        {/*
+          `ref` (this hook's cross-fade target) wraps only the temperature/
+          meta content — the icon above and the `.glass-panel` card itself
+          are excluded so the card's chrome never animates and the icon
+          keeps driving its own independent intro/loop (see `WeatherIcon`).
+        */}
+        <div ref={ref} className="grid grid-cols-[1fr_auto] items-start gap-x-4 sm:block ">
           <div className="col-start-1">
             <p className="eyebrow-label">Today's Weather</p>
             <p className="text-6xl leading-none font-bold sm:text-7xl">{Math.round(temperature)}°</p>

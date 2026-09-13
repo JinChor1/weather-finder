@@ -44,6 +44,22 @@ export function useFadeInUp<T extends HTMLElement = HTMLDivElement>(order: numbe
           duration: FADE_IN_DURATION,
           ease: FADE_IN_EASE,
           delay: order * FADE_IN_STAGGER_GAP,
+          // GSAP animates `y` via an inline `transform`, and doesn't strip
+          // that inline style once the tween completes by default — it's
+          // left on the element as `transform: translate(0px, 0px)` (or
+          // equivalent), not no inline `transform` at all. Any element with
+          // a `transform` value other than `none` establishes its own CSS
+          // stacking context, which is a problem for a wrapper whose only
+          // job is layout: it silently starts competing (and losing) against
+          // *sibling* stacking contexts by DOM order rather than z-index,
+          // since z-index values only resolve against siblings *within* the
+          // same stacking context. `clearProps: 'transform'` removes that
+          // inline transform once the tween resolves, returning the element
+          // to having none at rest, so it doesn't leave a stray stacking
+          // context behind (see `SearchBar`'s z-index comments for a
+          // concrete case this fixed: its suggestions dropdown rendering
+          // behind `WeatherResult` because of exactly this).
+          clearProps: 'transform',
         },
       )
     }, element)

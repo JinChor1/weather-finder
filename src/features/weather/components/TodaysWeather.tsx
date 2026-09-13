@@ -7,6 +7,7 @@ import { SearchHistory } from './SearchHistory'
 import { useCurrentWeatherQuery } from '../hooks/useCurrentWeatherQuery'
 import { useSearchHistoryStore } from '../store/useSearchHistoryStore'
 import { useFadeInUp } from '../../../hooks/useFadeInUp'
+import { useContentTransition } from '../../../hooks/useContentTransition'
 
 /**
  * Composes `SearchBar` with the "Today's Weather" result area. Owns the
@@ -27,6 +28,20 @@ export function TodaysWeather() {
   const searchBarFadeInRef = useFadeInUp<HTMLDivElement>(1)
   const resultFadeInRef = useFadeInUp<HTMLDivElement>(2)
   const historyFadeInRef = useFadeInUp<HTMLDivElement>(3)
+
+  // Replays a quick fade+translate whenever the *visible branch* of the
+  // result area changes — loading -> success, success -> error, error -> a
+  // new success for a different city, etc. Keyed on `status` plus the
+  // *submitted* query (not `weatherQuery.data`/`error`, which can get a new
+  // object reference from a passive background refetch of the same query —
+  // see the history-recording effect below for the same distinction) so a
+  // background refetch resolving for the same city never replays this, but
+  // a genuine new search does even when it lands on the same status (e.g.
+  // one error following another, or an already-cached city's instant
+  // success with no visible loading step in between).
+  const resultTransitionKey =
+    weatherQuery.status === 'pending' ? (weatherQuery.isFetching ? 'loading' : 'idle') : `${weatherQuery.status}:${searchQuery ?? ''}`
+  const resultTransitionRef = useContentTransition<HTMLDivElement>(resultTransitionKey)
 
   const historyEntries = useSearchHistoryStore((state) => state.entries)
   const addHistoryEntry = useSearchHistoryStore((state) => state.addEntry)
@@ -89,26 +104,39 @@ export function TodaysWeather() {
           `isFetching` flips. `isFetching` is still checked alongside
           `status === 'pending'` to tell "actually loading" apart from
           "idle, nothing submitted yet" (both are `'pending'`).
+
+          `resultTransitionRef` is attached to an inner content wrapper
+          within whichever one of these 4 branches is actually rendered —
+          never to a branch's own bordered/background box (the `glass-panel`
+          div here, or `WeatherResult`/`NotFoundBanner`'s equivalent chrome
+          one level in). That box always renders instantly at its correct
+          (resized) dimensions with no motion of its own; only the content
+          nested inside it cross-fades on a branch/result change. Only one
+          branch is ever mounted at a time, so reusing the same ref across
+          all 4 is safe: React attaches/detaches it correctly as the branch
+          changes.
         */}
         {weatherQuery.status === 'pending' && weatherQuery.isFetching && (
           <div
             role="status"
             aria-busy="true"
             aria-live="polite"
-            className="glass-panel mx-auto flex w-full max-w-2xl items-center justify-center gap-2 p-8 text-sm font-medium text-muted"
+            className="glass-panel mx-auto flex w-full max-w-2xl items-center justify-center p-8 text-sm font-medium text-muted"
           >
-            <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />
-            Loading today's weather…
+            <div ref={resultTransitionRef} className="flex items-center gap-2">
+              <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />
+              Loading today's weather…
+            </div>
           </div>
         )}
 
-        {weatherQuery.status === 'error' && <NotFoundBanner reason={weatherQuery.error.reason} />}
+        {weatherQuery.status === 'error' && <NotFoundBanner ref={resultTransitionRef} reason={weatherQuery.error.reason} />}
 
-        {weatherQuery.status === 'success' && <WeatherResult weather={weatherQuery.data} />}
+        {weatherQuery.status === 'success' && <WeatherResult ref={resultTransitionRef} weather={weatherQuery.data} />}
 
         {weatherQuery.status === 'pending' && !weatherQuery.isFetching && (
           <div className="glass-panel mx-auto w-full max-w-2xl p-8 text-center text-sm font-medium text-muted">
-            Search a city, country, or state to see today's weather.
+            <div ref={resultTransitionRef}>Search a city, country, or state to see today's weather.</div>
           </div>
         )}
       </div>

@@ -114,9 +114,13 @@ describe('TodaysWeather', () => {
     mockUseCurrentWeatherQuery.mockReturnValue(makeResult({ isFetching: true }))
     renderTodaysWeather()
 
-    const status = screen.getByText(/loading today's weather/i)
-    expect(status).toHaveAttribute('role', 'status')
-    expect(status).toHaveAttribute('aria-busy', 'true')
+    // The visible text now sits in an inner content wrapper (the cross-fade
+    // target — see `useContentTransition`), not the `role="status"` box
+    // itself — walk up to that ancestor to assert its `aria-busy` attribute.
+    // (Can't use `getByRole('status')` directly: `SearchHistory` renders its
+    // own unnamed `status` live region too, which would make this ambiguous.)
+    const statusBox = screen.getByText(/loading today's weather/i).closest('[role="status"]')
+    expect(statusBox).toHaveAttribute('aria-busy', 'true')
   })
 
   it('renders the not-found banner for a not-found error', () => {
