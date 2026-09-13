@@ -127,3 +127,15 @@ sync. Animation is skipped entirely when the user has
   reasonable default (roughly a week's worth of casual daily lookups) that
   keeps the `localStorage`-persisted payload small. Oldest entries are
   evicted first once a new search would exceed the cap.
+- **Deliberate "Labor Illusion" delay on weather search**: `fetchCurrentWeather`
+  (`src/features/weather/api/openWeatherClient.ts`) pads its response with a
+  hardcoded `LABOR_ILLUSION_DELAY_MS` (700ms) wait, run concurrently with the
+  real network request so it only pads a fast response up to that floor
+  rather than stacking on top of a slow one. This is intentional UX polish —
+  a lookup that resolves in a handful of milliseconds reads as suspiciously
+  shallow, so the loading state is kept visible long enough to read as "doing
+  real work" (the same pattern behind Kayak's fake multi-site-search
+  animation) — **not** unintended latency, a bug, or a leftover debug
+  `setTimeout`. It applies to both the success and error paths. The
+  location-suggestions dropdown (`fetchLocationSuggestions`) is deliberately
+  left undelayed since it backs live-typing feedback.
