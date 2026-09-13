@@ -40,7 +40,7 @@ The client's stated success criteria (feature completeness, code readability, we
 
 **Design assets** (`public/`) — the mockup's actual art, matching `docs/Requirement.pdf`:
 - `bg-light.png` / `bg-dark.png` — full-bleed purple cloudy-sky background images for the light and dark theme respectively; both are in use, swapped by the theme switcher (see **Theming** below).
-- `cloud.png` / `sun.png` — the weather condition icon glyphs from the mockup (a rain cloud, and a cloud-over-sun combo) — presumably the start of a small icon set for mapping OpenWeatherMap conditions to an illustration; more conditions may need equivalent art later (clear, thunderstorm, snow, etc.) if the API returns something these two don't cover.
+- `sun.svg` / `sun-shadow.svg`, `cloud.svg` / `cloud-shadow.svg`, `rain-drop-1.svg` / `rain-drop-2.svg` / `rain-drop-3.svg` — the layered weather-condition icon set, replacing the original `cloud.png`/`sun.png` mockup glyphs. Composed and GSAP-animated by `src/features/weather/components/WeatherIcon.tsx`, with the OpenWeatherMap condition → layer-set mapping in `src/features/weather/utils/weatherIconBucket.ts`.
 - `favicon.svg` — the default Vite placeholder favicon, unrelated to the mockup; still pending a real favicon.
 
 Serve these from `public/` with a root-relative path (e.g. `/bg-light.png`) rather than importing them through `src/assets/` — nothing in `src/` re-exports or wraps them yet.
