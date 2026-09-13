@@ -1,0 +1,12 @@
+- Complete every requirement stated in the assessment.
+- Allow searches using both city and country.
+- Display a clear message for invalid searches or API errors.
+- Include working search, clear, search-again and delete buttons.
+- Save the search history so it remains after the page is refreshed.
+- Ensure the design works well on both desktop and mobile.
+- Use clean, readable and reusable ReactJS components.
+- Include loading states and handle different edge cases.
+- Run the lint, type-check and build commands with no errors.
+- Remove unused code and unfinished functions.
+- Include clear setup instructions and assumptions in the README.
+- If possible, add automated tests and a light/dark theme.
