@@ -114,7 +114,7 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
   }
 
   return (
-    <section aria-label="Search history" className="glass-panel mx-auto mt-6 w-full max-w-2xl p-6 text-content">
+    <section aria-label="Search history" className="glass-panel mx-auto mt-6 w-full max-w-2xl p-6 text-content overflow-hidden">
       <h2
         ref={headingRef}
         tabIndex={-1}
