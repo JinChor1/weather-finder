@@ -2,6 +2,8 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { Search, Trash2 } from 'lucide-react'
 import type { SearchHistoryEntry } from '../store/useSearchHistoryStore'
 import { formatTimestamp } from '../utils/formatTimestamp'
+import { useFlipListTransition } from '../hooks/useFlipListTransition'
+import { mergeRefs } from '../../../hooks/mergeRefs'
 
 /** How many rows are visible initially, and how many more "Show more" reveals each click. */
 const HISTORY_PAGE_SIZE = 5
@@ -38,6 +40,13 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
   const shownCount = Math.min(visibleCount, entries.length)
   const visibleEntries = entries.slice(0, shownCount)
   const hasMore = shownCount < entries.length
+
+  // Drives the add/remove/reflow animation for the rows below — see
+  // `useFlipListTransition` for why `renderedItems` (not `visibleEntries`
+  // directly) is what actually gets rendered, and its `containerRef` is
+  // merged onto the same `<ul>` this component's own focus-restoration
+  // logic already tracks via `listRef`.
+  const { containerRef: flipContainerRef, renderedItems } = useFlipListTransition(visibleEntries, (entry) => entry.id)
 
   const listRef = useRef<HTMLUListElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -105,7 +114,7 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
   }
 
   return (
-    <section aria-label="Search history" className="glass-panel mx-auto mt-6 w-full max-w-2xl p-6 text-content">
+    <section aria-label="Search history" className="glass-panel mx-auto mt-6 w-full max-w-2xl p-6 text-content overflow-hidden">
       <h2
         ref={headingRef}
         tabIndex={-1}
@@ -143,36 +152,62 @@ export function SearchHistory({ entries, onSearchAgain, onDelete }: SearchHistor
         <p className="py-6 text-center text-sm font-semibold text-content">No Record</p>
       ) : (
         <>
-          <ul ref={listRef} tabIndex={-1} className="divide-y divide-content/10 focus:outline-none">
-            {visibleEntries.map((entry) => (
-              <li key={entry.id} className="flex items-center justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <p className="truncate font-semibold" title={entry.label}>
-                    {entry.label}
-                  </p>
-                  <p className="text-sm text-muted/80">{formatTimestamp(entry.searchedAt, 'lower-compact')}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    type="button"
-                    aria-label={`Search again for ${entry.label}`}
-                    onClick={() => onSearchAgain(entry.query)}
-                    className="icon-button"
-                  >
-                    <Search aria-hidden="true" className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    ref={(node) => registerDeleteButtonRef(entry.id, node)}
-                    aria-label={`Delete ${entry.label} from history`}
-                    onClick={() => handleDelete(entry.id)}
-                    className="icon-button"
-                  >
-                    <Trash2 aria-hidden="true" className="h-4 w-4" />
-                  </button>
-                </div>
-              </li>
-            ))}
+          <ul
+            ref={mergeRefs(listRef, flipContainerRef)}
+            tabIndex={-1}
+            className="relative divide-y divide-content/10 focus:outline-none"
+          >
+            {renderedItems.map(({ key, item: entry, leaving }) =>
+              leaving ? (
+                // A row that just left `entries` but is still finishing its
+                // exit tween (see `useFlipListTransition`) — a purely
+                // visual remnant, not a real/actionable row anymore, so it's
+                // non-interactive and hidden from assistive tech (the
+                // `role="status"` summary below already announces the real,
+                // already-updated count).
+                <li
+                  key={key}
+                  data-flip-id={key}
+                  aria-hidden="true"
+                  className="flex items-center justify-between gap-3 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold" title={entry.label}>
+                      {entry.label}
+                    </p>
+                    <p className="text-sm text-muted/80">{formatTimestamp(entry.searchedAt, 'lower-compact')}</p>
+                  </div>
+                </li>
+              ) : (
+                <li key={key} data-flip-id={key} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold" title={entry.label}>
+                      {entry.label}
+                    </p>
+                    <p className="text-sm text-muted/80">{formatTimestamp(entry.searchedAt, 'lower-compact')}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label={`Search again for ${entry.label}`}
+                      onClick={() => onSearchAgain(entry.query)}
+                      className="icon-button"
+                    >
+                      <Search aria-hidden="true" className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      ref={(node) => registerDeleteButtonRef(entry.id, node)}
+                      aria-label={`Delete ${entry.label} from history`}
+                      onClick={() => handleDelete(entry.id)}
+                      className="icon-button"
+                    >
+                      <Trash2 aria-hidden="true" className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              ),
+            )}
           </ul>
 
           {hasMore && (

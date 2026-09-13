@@ -11,6 +11,28 @@ export type { LocationSuggestion } from './openWeatherSchemas'
 const CURRENT_WEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather'
 const GEOCODING_URL = 'https://api.openweathermap.org/geo/1.0/direct'
 
+/**
+ * Deliberate artificial delay applied to `fetchCurrentWeather` only (the
+ * current-weather search result), for a "Labor Illusion" effect: a lookup
+ * that resolves in a handful of milliseconds reads as suspiciously shallow,
+ * so we pad the wait to feel like the app is "doing real work" — this is
+ * intentional UX polish (see e.g. Kayak's fake multi-site-search animation),
+ * not a bug, regression, or forgotten debug `setTimeout`. 700ms sits in the
+ * middle of the ~600-900ms range that reads as "working" without feeling
+ * sluggish. Runs concurrently with the real network request (see
+ * `Promise.all` below) so it only pads a fast response up to this floor
+ * rather than stacking on top of however long a slow one already took, and
+ * applies equally to the success and error paths since it happens before
+ * either is known — a failed search should feel like it also did the work.
+ * Deliberately NOT applied to `fetchLocationSuggestions`, which backs
+ * live-typing suggestions and must stay responsive.
+ */
+export const LABOR_ILLUSION_DELAY_MS = 700
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 /** Distinguishes *why* a request failed, so callers can decide what to show. */
 export type OpenWeatherErrorReason =
   | 'not-found'
@@ -117,7 +139,7 @@ export async function fetchCurrentWeather(query: string): Promise<WeatherResultD
   const trimmedQuery = query.trim()
   const url = `${CURRENT_WEATHER_URL}?q=${encodeURIComponent(trimmedQuery)}&units=metric&appid=${apiKey}`
 
-  const { response, body } = await fetchJson(url)
+  const [{ response, body }] = await Promise.all([fetchJson(url), delay(LABOR_ILLUSION_DELAY_MS)])
 
   if (!response.ok) {
     const parsedError = openWeatherErrorResponseSchema.safeParse(body)

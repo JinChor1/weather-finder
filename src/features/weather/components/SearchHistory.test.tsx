@@ -153,4 +153,63 @@ describe('SearchHistory', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Search history is empty.')
   })
+
+  it('does not throw as rows are added, reordered, and removed across rerenders (Flip-driven list animation)', async () => {
+    const user = userEvent.setup()
+    let currentEntries = makeEntries(2)
+    const handleDelete = (id: string) => {
+      currentEntries = currentEntries.filter((entry) => entry.id !== id)
+      rerender(<SearchHistory entries={currentEntries} onSearchAgain={vi.fn()} onDelete={handleDelete} />)
+    }
+
+    const { rerender, unmount } = render(
+      <SearchHistory entries={currentEntries} onSearchAgain={vi.fn()} onDelete={handleDelete} />,
+    )
+
+    // A new search unshifts a brand-new row (an "entering" row for the Flip hook).
+    currentEntries = [makeEntry({ id: 'id-new', label: 'New City, XX', query: 'New City, XX' }), ...currentEntries]
+    rerender(<SearchHistory entries={currentEntries} onSearchAgain={vi.fn()} onDelete={handleDelete} />)
+    expect(screen.getByText('New City, XX')).toBeInTheDocument()
+
+    // Re-searching an existing entry bumps it back to the top (a reorder).
+    currentEntries = [currentEntries[1], currentEntries[0], currentEntries[2]]
+    rerender(<SearchHistory entries={currentEntries} onSearchAgain={vi.fn()} onDelete={handleDelete} />)
+    expect(screen.getAllByRole('listitem')).toHaveLength(3)
+
+    // Deleting a row from a still-non-empty list keeps the section (and its
+    // `<ul>`) mounted, so the removed row can animate out via the hook
+    // instead of being torn down with the rest of the list.
+    await user.click(screen.getByRole('button', { name: 'Delete City 0, XX from history' }))
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+
+    expect(() => unmount()).not.toThrow()
+  })
+
+  it('renders correctly and still supports delete when prefers-reduced-motion is set', async () => {
+    const originalMatchMedia = window.matchMedia
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia
+
+    const user = userEvent.setup()
+    render(<ControlledSearchHistory initialEntries={makeEntries(2)} />)
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+
+    await user.click(screen.getByRole('button', { name: 'Delete City 0, XX from history' }))
+
+    // No lingering "leaving" row held back for an animation that's been
+    // skipped — the removed row should already be gone.
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.queryByText('City 0, XX')).not.toBeInTheDocument()
+
+    window.matchMedia = originalMatchMedia
+  })
 })

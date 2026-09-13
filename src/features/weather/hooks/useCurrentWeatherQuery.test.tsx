@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { useCurrentWeatherQuery } from './useCurrentWeatherQuery'
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -32,11 +32,16 @@ describe('useCurrentWeatherQuery', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_OPENWEATHER_API_KEY', 'test-api-key')
     vi.stubGlobal('fetch', vi.fn())
+    // `fetchCurrentWeather` pads its response with a deliberate
+    // `LABOR_ILLUSION_DELAY_MS` wait — fake timers let the tests below
+    // fast-forward through it instead of actually waiting 700ms.
+    vi.useFakeTimers()
   })
 
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   it('stays disabled and never fetches when searchParams is null', () => {
@@ -54,7 +59,11 @@ describe('useCurrentWeatherQuery', () => {
       wrapper: createWrapper(),
     })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    // `runAllTimersAsync` (rather than advancing by the exact delay) also
+    // flushes whatever timer-driven microtask ordering sits between the fake
+    // labor-illusion timer firing and the query's state settling.
+    await act(() => vi.runAllTimersAsync())
+    expect(result.current.isSuccess).toBe(true)
 
     expect(result.current.data).toEqual({
       city: 'Johor',
@@ -76,7 +85,8 @@ describe('useCurrentWeatherQuery', () => {
       wrapper: createWrapper(),
     })
 
-    await waitFor(() => expect(result.current.isError).toBe(true))
+    await act(() => vi.runAllTimersAsync())
+    expect(result.current.isError).toBe(true)
 
     expect(result.current.error).toMatchObject({ status: 404, reason: 'not-found' })
     expect(fetch).toHaveBeenCalledTimes(1)
