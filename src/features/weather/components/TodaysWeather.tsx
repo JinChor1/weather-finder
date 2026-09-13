@@ -6,6 +6,7 @@ import { NotFoundBanner } from './NotFoundBanner'
 import { SearchHistory } from './SearchHistory'
 import { useCurrentWeatherQuery } from '../hooks/useCurrentWeatherQuery'
 import { useSearchHistoryStore } from '../store/useSearchHistoryStore'
+import { useFadeInUp } from '../../../hooks/useFadeInUp'
 
 /**
  * Composes `SearchBar` with the "Today's Weather" result area. Owns the
@@ -20,6 +21,12 @@ import { useSearchHistoryStore } from '../store/useSearchHistoryStore'
 export function TodaysWeather() {
   const [searchQuery, setSearchQuery] = useState<string | null>(null)
   const weatherQuery = useCurrentWeatherQuery(searchQuery)
+
+  // Page-load stagger: this feature owns the 2nd, 3rd, and 4th positions in
+  // the 4-element sequence (`App.tsx`'s `ThemeToggle` wrapper is order 0).
+  const searchBarFadeInRef = useFadeInUp<HTMLDivElement>(1)
+  const resultFadeInRef = useFadeInUp<HTMLDivElement>(2)
+  const historyFadeInRef = useFadeInUp<HTMLDivElement>(3)
 
   const historyEntries = useSearchHistoryStore((state) => state.entries)
   const addHistoryEntry = useSearchHistoryStore((state) => state.addEntry)
@@ -70,8 +77,10 @@ export function TodaysWeather() {
         reflect a history row's text, so lifting it to controlled state here
         would be a bigger change than this feature needs.
       */}
-      <SearchBar onSearch={submitSearch} onClear={() => setSearchQuery(null)} />
-      <div className="mt-6">
+      <div ref={searchBarFadeInRef}>
+        <SearchBar onSearch={submitSearch} onClear={() => setSearchQuery(null)} />
+      </div>
+      <div ref={resultFadeInRef} className="mt-6">
         {/*
           Branch off `status` rather than `isFetching` so a background
           refetch (e.g. `refetchOnWindowFocus` firing after alt-tabbing back)
@@ -118,7 +127,9 @@ export function TodaysWeather() {
           : ''}
       </p>
 
-      <SearchHistory entries={historyEntries} onSearchAgain={submitSearch} onDelete={removeHistoryEntry} />
+      <div ref={historyFadeInRef}>
+        <SearchHistory entries={historyEntries} onSearchAgain={submitSearch} onDelete={removeHistoryEntry} />
+      </div>
     </>
   )
 }
