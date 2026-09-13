@@ -31,19 +31,22 @@ describe('WeatherResult', () => {
     expect(screen.getByText('01-09-2022 09:41 AM')).toBeInTheDocument()
   })
 
-  it('renders the fallback icon for a non-clear condition, decorative to assistive tech', () => {
+  it('renders the scattered-clouds icon layers for a scattered-clouds description, decorative to assistive tech', () => {
     const { container } = render(<WeatherResult weather={sampleWeather} />)
 
-    const icon = container.querySelector('img')
-    expect(icon).toHaveAttribute('src', '/cloud.png')
-    expect(icon).toHaveAttribute('alt', '')
+    const iconSources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'))
+    expect(iconSources).toEqual(['/cloud-shadow.svg', '/cloud.svg'])
+    for (const img of container.querySelectorAll('img')) {
+      expect(img).toHaveAttribute('alt', '')
+    }
   })
 
-  it('renders the clear-sky icon for a clear condition, decorative to assistive tech', () => {
-    const { container } = render(<WeatherResult weather={{ ...sampleWeather, condition: 'Clear' }} />)
+  it('renders the clear-sky icon layers for a clear-sky description, decorative to assistive tech', () => {
+    const { container } = render(
+      <WeatherResult weather={{ ...sampleWeather, condition: 'Clear', description: 'clear sky' }} />,
+    )
 
-    const icon = container.querySelector('img')
-    expect(icon).toHaveAttribute('src', '/sun.png')
-    expect(icon).toHaveAttribute('alt', '')
+    const iconSources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'))
+    expect(iconSources).toEqual(['/sun-shadow.svg', '/sun.svg', '/cloud-shadow.svg', '/cloud.svg'])
   })
 })

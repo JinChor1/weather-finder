@@ -29,7 +29,7 @@ export function WeatherResult({ weather }: WeatherResultProps) {
     >
       <div className="glass-panel relative p-6">
         <div className="absolute -top-12 right-2 h-32 w-32 sm:-top-20 sm:right-6 sm:h-56 sm:w-56">
-          <WeatherIcon condition={condition} className="h-full w-full object-contain drop-shadow-lg" />
+          <WeatherIcon description={description} className="h-full w-full drop-shadow-lg" />
         </div>
 
         <div className="grid grid-cols-[1fr_auto] items-start gap-x-4 sm:block ">

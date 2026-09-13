@@ -66,6 +66,51 @@ transparency) but isn't a guarantee of 4.5:1 in every case, per the
 `--content`-on-`.glass-panel` finding directly above — the same underlying
 design-team decision would also resolve this instance.
 
+## Weather icon mapping
+
+`WeatherIcon` (`src/features/weather/components/WeatherIcon.tsx`) renders a
+layered, GSAP-animated icon built from `public/sun.svg`,
+`public/sun-shadow.svg`, `public/cloud.svg`, `public/cloud-shadow.svg`, and
+`public/rain-drop-{1,2,3}.svg`. Which layers appear is decided by
+`getWeatherIconBucket` (`src/features/weather/utils/weatherIconBucket.ts`)
+from OpenWeatherMap's longer `description` field (not the shorter
+`condition` label — several distinct descriptions like "few clouds"/
+"scattered clouds"/"broken clouds" all share `condition: "Clouds"` but need
+different art):
+
+| Bucket | Matches (`description`, case-insensitive) | Layers rendered |
+| --- | --- | --- |
+| Clear | `clear sky` | sun, sun-shadow |
+| Few clouds | `few clouds` | sun, sun-shadow, cloud, cloud-shadow |
+| Scattered clouds | `scattered clouds` | cloud, cloud-shadow |
+| Broken clouds | `broken clouds`, `overcast clouds` | cloud, cloud-shadow (greyscale) |
+| Shower rain / thunderstorm | `shower rain` and its intensity variants; `thunderstorm` and all of its variants (with rain/drizzle, light/heavy/ragged, etc.) | cloud, cloud-shadow (greyscale), rain-drop-1/2/3 |
+| Rain | `light rain`, `moderate rain`, `heavy intensity rain`, `very heavy rain`, `extreme rain`, `freezing rain` | sun, sun-shadow, cloud, cloud-shadow, rain-drop-1/2/3 |
+| Other (fallback) | Anything not listed above — drizzle (all variants), snow (all variants), the atmosphere group (mist, smoke, haze, fog, sand/dust, volcanic ash, squalls, tornado), and any unrecognized description | sun, sun-shadow, cloud, cloud-shadow |
+
+`overcast clouds` is folded into the "broken clouds" bucket rather than the
+"other" fallback: visually it's the same full-cloud-cover case, just one
+step heavier, and no dedicated art exists for either. The "other" bucket
+exists because OpenWeatherMap returns roughly 40 distinct `description`
+values and no bespoke icon set covers drizzle, snow, or the
+mist/fog/haze/dust "atmosphere" group yet — those reuse the generic
+cloud+sun composition rather than showing nothing.
+
+**Greyscale treatment**: the "broken clouds" and "shower rain / thunderstorm"
+buckets desaturate `cloud.svg`/`cloud-shadow.svg` via a Tailwind CSS filter
+(`grayscale-[70%] saturate-[40%] brightness-95`) rather than editing the
+source SVGs' gradient stops directly. This was the cheaper, easily-tunable
+option — it applies identically to both cloud layers and can be adjusted or
+reverted without touching the asset files.
+
+**Animation**: each layer group loops via GSAP (`gsap.context()`, cleaned up
+on unmount/condition change) — sun/sun-shadow pulse gently (a plain filled
+circle doesn't visibly change under rotation, so a scale/opacity "glow"
+breathe was used instead), cloud/cloud-shadow drift horizontally as a unit,
+and the three rain drops fall in a staggered loop so they don't fall in
+sync. Animation is skipped entirely when the user has
+`prefers-reduced-motion: reduce` set.
+
 ## Assumptions
 
 - **`temperatureHigh`/`temperatureLow`**: populated from OpenWeatherMap's
