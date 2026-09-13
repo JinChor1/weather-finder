@@ -54,12 +54,12 @@ export function WeatherResult({ weather, ref }: WeatherResultProps) {
             <p className="mt-2 text-sm font-medium text-muted/80">
               H: {Math.round(temperatureHigh)}° L: {Math.round(temperatureLow)}°
             </p>
-          </div>
-
-          <div className="col-start-2 flex flex-col items-end gap-1 pt-1 text-right text-sm text-muted/80 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-start sm:gap-x-6 sm:gap-y-1 mt-10 sm:mt-0 sm:text-left">
             <p className="font-semibold text-content">
               {city}, {country}
             </p>
+          </div>
+
+          <div className="col-start-2 flex flex-col items-end mt-auto gap-1 pt-1 text-right text-sm text-muted/80 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-start sm:gap-x-6 sm:gap-y-1 mt-10 sm:mt-0 sm:text-left">
             <p>{formatTimestamp(observedAt, 'upper-spaced')}</p>
             <p>Humidity: {humidity}%</p>
             <p>{condition}</p>
